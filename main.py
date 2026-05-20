@@ -8,7 +8,7 @@ import threading
 import time
 import webbrowser
 from config import settings
-from dashboard.web_dashboard import start_server, app as fastapi_app
+from dashboard.web_dashboard import start_server, app as fastapi_app, update_state_safe
 from dashboard.overlay import HUDOverlay
 from detectors.face_detector import FaceDetector
 from detectors.ear_detector import EARDetector
@@ -141,8 +141,10 @@ async def async_main():
                 
                 # Calibration feed
                 if calibration._collecting:
-                    perclos.set_baseline(ear_data["ear"])
                     if calibration.feed(ear_data["ear"], mar_data["mar"]):
+                        ear_detector.set_threshold(calibration.ear_threshold)
+                        mar_detector.set_threshold(calibration.mar_threshold)
+                        perclos.set_baseline(calibration.profile.ear_open_baseline)
                         tts.speak("Calibration complete. Drive safely.", priority=2)
                         
                 # Fatigue Fusion
@@ -185,9 +187,8 @@ async def async_main():
             # --- DASHBOARD & OVERLAY ---
             hud_frame = hud.render(frame, metrics)
             
-            # Send to FastAPI global state
-            fastapi_app.state.latest_frame = hud_frame
-            fastapi_app.state.latest_metrics = metrics
+            # Send to FastAPI global state thread-safely
+            update_state_safe(metrics, hud_frame)
             
             # (Optional) local CV2 show if debugging
             if settings.DEBUG_MODE:

@@ -18,9 +18,25 @@ from config import settings
 app = FastAPI(title="DMS V4 Dashboard")
 
 # Global state to share between main camera thread and FastAPI
-app.state.lock = threading.Lock()
-app.state.latest_frame = None
-app.state.latest_metrics = {}
+_metrics_lock = threading.Lock()
+_latest_metrics: dict = {}
+_latest_frame = None
+
+def update_state_safe(metrics: dict, frame=None):
+    """Thread-safe state update from camera loop."""
+    with _metrics_lock:
+        global _latest_metrics, _latest_frame
+        _latest_metrics = metrics.copy()
+        if frame is not None:
+            _latest_frame = frame.copy()
+
+def read_state_safe() -> tuple:
+    """Thread-safe state read from WebSocket."""
+    with _metrics_lock:
+        metrics = _latest_metrics.copy()
+        frame = _latest_frame.copy() if _latest_frame is not None else None
+        return metrics, frame
+
 app.state.trigger_calibrate = False
 
 html_path = Path("static/dashboard.html")
@@ -49,9 +65,7 @@ async def websocket_endpoint(websocket: WebSocket):
             await asyncio.sleep(1.0 / settings.target_fps)
             
             # Send metrics
-            with app.state.lock:
-                metrics = app.state.latest_metrics.copy() if app.state.latest_metrics else {}
-                frame = app.state.latest_frame.copy() if app.state.latest_frame is not None else None
+            metrics, frame = read_state_safe()
             
             payload = {"metrics": metrics, "image": None}
             
