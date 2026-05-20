@@ -14,7 +14,6 @@ import numpy as np
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Callable
-import pyaudio
 import torch
 
 
@@ -45,9 +44,9 @@ class VoiceCognitionAgent:
     """
     
     INTENT_PATTERNS = {
-        Intent.ASK_CURRENT:  ["how am i", "my score", "fatigue", "how tired", "doing right now"],
-        Intent.ASK_HISTORY:  ["last time", "yesterday", "last week", "compare", "history", "before"],
+        Intent.ASK_HISTORY:  ["last time", "yesterday", "last week", "compare", "history", "before", "previous"],
         Intent.ASK_TREND:    ["getting worse", "trend", "rising", "improving", "trajectory"],
+        Intent.ASK_CURRENT:  ["how am i", "my score", "fatigue", "how tired", "doing right now"],
         Intent.REPORT_TIRED: ["feeling tired", "sleepy", "drowsy", "need a break", "exhausted"],
         Intent.REPORT_FINE:  ["i'm fine", "im fine", "stop", "false alarm", "i'm okay"],
         Intent.ADJUST_THRESHOLD: ["too sensitive", "too many alerts", "adjust", "calibrate"],
@@ -96,21 +95,36 @@ class VoiceCognitionAgent:
             print("[VoiceAgent] Whisper medium loaded")
     
     def classify_intent(self, text: str) -> tuple[Intent, float]:
-        """Rule-based intent classification — no LLM needed for routing."""
+        """Rule-based intent classification with temporal keyword priority."""
         text_lower = text.lower()
         best_intent = Intent.UNKNOWN
-        best_score = 0.0
+        best_count = 0
+        best_ratio = 0.0
+        
+        # Temporal keywords that should force HISTORY intent
+        temporal_keywords = {"yesterday", "last week", "last time", "before", "previous", "history"}
+        has_temporal = any(kw in text_lower for kw in temporal_keywords)
         
         for intent, patterns in self.INTENT_PATTERNS.items():
-            score = sum(1 for p in patterns if p in text_lower) / len(patterns)
-            if score > best_score:
-                best_score = score
+            count = sum(1 for p in patterns if p in text_lower)
+            ratio = count / len(patterns)
+            if count > best_count or (count == best_count and ratio > best_ratio):
+                best_count = count
+                best_ratio = ratio
                 best_intent = intent
         
-        return best_intent, best_score
+        # Override: temporal keywords always win for HISTORY
+        if has_temporal and best_intent != Intent.ASK_HISTORY:
+            history_count = sum(1 for p in self.INTENT_PATTERNS[Intent.ASK_HISTORY] if p in text_lower)
+            if history_count > 0:
+                best_intent = Intent.ASK_HISTORY
+                best_ratio = history_count / len(self.INTENT_PATTERNS[Intent.ASK_HISTORY])
+        
+        return best_intent, best_ratio
     
     def _listen_loop(self):
         """Background audio capture + VAD + transcription."""
+        import pyaudio
         self._load_models()
         
         CHUNK = 512

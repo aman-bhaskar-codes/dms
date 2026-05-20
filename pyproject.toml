@@ -44,6 +44,10 @@ dependencies = [
 
     # Voice
     "faster-whisper>=1.0.1",
+    "pyaudio>=0.2.14",
+    "torch>=2.0.0",
+    "torchaudio>=2.0.0",
+    "httpx>=0.27.0",
 
     # Utils
     "scipy>=1.13.0",

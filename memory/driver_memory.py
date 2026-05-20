@@ -3,6 +3,7 @@ Driver Memory manager for V4.
 Handles runtime state, session context for AI, and profile stats.
 """
 import time
+from datetime import datetime
 from typing import Dict, List
 from memory.database import DatabaseManager
 
@@ -44,29 +45,36 @@ class DriverMemory:
         await self.db.end_session(self.session_id, avg, self.alert_count)
         print(f"[Memory] Session ended. Avg Fatigue: {avg:.1f}")
 
-    async def get_session_context(self) -> str:
-        """Compile recent events into a text string for the AI."""
+    async def get_session_context(self, metrics: dict = None) -> dict:
+        """Build full context for AI — specific, grounded, non-repetitive."""
+        if not metrics: metrics = {}
         if not self.session_id:
-            return "No active session."
+            return {"summary": "No active session."}
         
-        events = await self.db.get_recent_events(self.session_id, limit=5)
-        tips = await self.db.get_recent_ai_tips(self.session_id, limit=2)
-        summary = await self.db.get_session_summary(self.session_id)
+        # Recent alert history (last 10 min)
+        recent_alerts = await self.db.get_recent_alerts(
+            self.session_id, window_minutes=10
+        )
+        alert_types_given = [a["event_type"] for a in recent_alerts]
         
-        context = f"Session Summary: {summary.get('total_alerts', 0)} critical/high alerts so far.\n\n"
+        # Historical baseline for this driver
+        history = await self.db.get_driver_history(self.driver_id, last_n=5)
+        avg_fatigue_hist = sum(s.get("avg_fatigue", 0) for s in history) / max(len(history), 1)
         
-        if not events:
-            context += "Recent events: Driver has been driving steadily with no major incidents.\n"
-        else:
-            context += "Recent events:\n"
-            for e in events:
-                mins_ago = (time.time() - e['timestamp']) / 60
-                context += f"- {mins_ago:.1f} min ago: {e['event_type']} (Severity: {e['severity']}, Fatigue: {e['fatigue_score']:.1f})\n"
-                
-        if tips:
-            context += "\nPreviously given advice (DO NOT REPEAT THESE):\n"
-            for t in tips:
-                mins_ago = (time.time() - t['timestamp']) / 60
-                context += f"- {mins_ago:.1f} min ago: {t['tip_text']}\n"
-                
-        return context
+        # Time context
+        hour = datetime.now().hour
+        time_risk = "high" if (hour < 6 or hour > 21) else "medium" if hour > 18 else "low"
+        
+        return {
+            "current_fatigue": metrics.get("fatigue_score", 0),
+            "fatigue_trend": metrics.get("fatigue_trend", 0),
+            "drive_minutes": metrics.get("drive_minutes", 0),
+            "alerts_given_already": alert_types_given,
+            "historical_avg_fatigue": avg_fatigue_hist,
+            "performing_vs_history": "worse" if metrics.get("fatigue_score", 0) > avg_fatigue_hist + 10 else "better",
+            "time_of_day_risk": time_risk,
+            "yawn_rate": metrics.get("yawn_rate", 0),
+            "ear": metrics.get("ear", 0),
+            "perclos_pct": metrics.get("perclos", 0) * 100,
+            "summary": "Active driver session"
+        }

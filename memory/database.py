@@ -137,3 +137,32 @@ class DatabaseManager:
             )
             row = await cursor.fetchone()
             return {"total_alerts": row["alert_count"] if row else 0}
+
+    async def get_recent_alerts(self, session_id: int, window_minutes: int = 10) -> List[Dict]:
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cutoff = time.time() - (window_minutes * 60)
+            cursor = await db.execute(
+                """
+                SELECT * FROM events 
+                WHERE session_id = ? AND timestamp > ? AND severity IN ('medium', 'high', 'critical')
+                ORDER BY timestamp DESC
+                """,
+                (session_id, cutoff)
+            )
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+            
+    async def get_driver_history(self, driver_id: str, last_n: int = 5) -> List[Dict]:
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                """
+                SELECT * FROM sessions 
+                WHERE driver_id = ? AND end_time IS NOT NULL
+                ORDER BY end_time DESC LIMIT ?
+                """,
+                (driver_id, last_n)
+            )
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
