@@ -41,6 +41,8 @@ dependencies = [
     "langchain-core>=0.1.0",
     "langchain-ollama>=0.1.0",
     "langgraph>=0.0.26",
+    "rank-bm25>=0.2.2",
+    "sentence-transformers>=2.7.0",
 
     # Voice
     "faster-whisper>=1.0.1",

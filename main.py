@@ -59,9 +59,26 @@ async def async_main():
     # 4. Initialize Perception Pipeline
     print("[SYSTEM] Initializing Camera and Perception Models...")
     cap = cv2.VideoCapture(settings.camera_index)
+    
+    # Retry camera access for up to 30s — handles macOS permission prompt delay
     if not cap.isOpened():
-        print(f"❌ Failed to open camera {settings.camera_index}")
-        return
+        print(f"⚠️  Camera {settings.camera_index} not ready. Retrying for 30s...")
+        print("   → On macOS: go to System Settings → Privacy & Security → Camera")
+        print("   → Enable camera access for your Terminal app")
+        update_state_safe({"status": "CAMERA_PERMISSION_DENIED",
+                           "error": "Grant camera access in System Settings → Privacy & Security → Camera"})
+        for _ in range(30):
+            await asyncio.sleep(1)
+            cap = cv2.VideoCapture(settings.camera_index)
+            if cap.isOpened():
+                print("✅ Camera connected!")
+                break
+        else:
+            print("❌ Camera could not be opened after 30s. Dashboard remains live.")
+            print("   Restart the app after granting camera permission.")
+            # Keep dashboard alive so user sees the error — don't return
+            while True:
+                await asyncio.sleep(5)
 
     face_detector = FaceDetector()
     ear_detector = EARDetector()
@@ -144,8 +161,8 @@ async def async_main():
                 # Calibration feed
                 if calibration._collecting:
                     if calibration.feed(ear_data["ear"], mar_data["mar"]):
-                        ear_detector.set_threshold(calibration.ear_threshold)
-                        mar_detector.set_threshold(calibration.mar_threshold)
+                        ear_detector.set_threshold(calibration.profile.ear_threshold)
+                        mar_detector.set_threshold(calibration.profile.mar_threshold)
                         perclos.set_baseline(calibration.profile.ear_open_baseline)
                         tts.speak("Calibration complete. Drive safely.", priority=2)
                         
