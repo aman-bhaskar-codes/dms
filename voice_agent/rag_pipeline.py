@@ -1,6 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_ollama import ChatOllama
 from memory.semantic_memory import SemanticMemory
+from config import settings
 
 RAG_SYSTEM_PROMPT = """
 You are a driver safety assistant.
@@ -23,7 +24,11 @@ Instructions:
 class RAGPipeline:
     def __init__(self, semantic_memory: SemanticMemory):
         self.memory = semantic_memory
-        self.llm = ChatOllama(model="llama3.2:3b", temperature=0.3)
+        self.llm = ChatOllama(
+            model=settings.ollama_model_fast,
+            base_url=settings.ollama_host,
+            temperature=0.3
+        )
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", RAG_SYSTEM_PROMPT),
             ("human", "{query}")

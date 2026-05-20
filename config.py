@@ -124,6 +124,13 @@ class Settings(BaseSettings):
     log_interval_frames: int = 30
     break_suggest_min: int = 90
 
+    # ── Vector & Semantic Memory (RAG) ───────────────────────────────
+    chroma_db_path: str = "data/chroma"
+    ollama_embed_model: str = "nomic-embed-text"
+    ollama_host: str = "http://localhost:11434"
+    chroma_collection_prefix: str = "dms_v4"
+    memory_db_path: str = "data/dms_episodic.db"
+
     # ── Landmark indices (do not change) ────────────────────────────
     LEFT_EYE_IDX:   list = [362, 385, 387, 263, 373, 380]
     RIGHT_EYE_IDX:  list = [33,  160, 158, 133, 153, 144]

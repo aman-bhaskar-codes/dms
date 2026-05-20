@@ -1,7 +1,7 @@
 import time
 import os
 import chromadb
-import config
+from config import settings
 from langchain_community.embeddings import OllamaEmbeddings
 
 class SemanticMemory:
@@ -9,7 +9,9 @@ class SemanticMemory:
     Vector store for driver history, behavior patterns, and past coaching.
     Enables RAG for the Voice Agent.
     """
-    def __init__(self, db_path: str = config.CHROMA_DB_PATH):
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            db_path = settings.chroma_db_path
         os.makedirs(db_path, exist_ok=True)
         self.client = chromadb.PersistentClient(path=db_path)
         
@@ -21,8 +23,8 @@ class SemanticMemory:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     self.embedder = OllamaEmbeddings(
-                        model=config.OLLAMA_EMBED_MODEL,
-                        base_url=config.OLLAMA_HOST
+                        model=settings.ollama_embed_model,
+                        base_url=settings.ollama_host
                     )
             
             def __call__(self, input: list[str]) -> list[list[float]]:
@@ -36,12 +38,12 @@ class SemanticMemory:
         
         # Collection for high-level session summaries and insights
         self.insights = self.client.get_or_create_collection(
-            name=f"{config.CHROMA_COLLECTION_PREFIX}_insights",
+            name=f"{settings.chroma_collection_prefix}_insights",
             embedding_function=self.embedding_func
         )
         # Collection for specific driver preferences (e.g. "prefers no sound alerts")
         self.preferences = self.client.get_or_create_collection(
-            name=f"{config.CHROMA_COLLECTION_PREFIX}_preferences",
+            name=f"{settings.chroma_collection_prefix}_preferences",
             embedding_function=self.embedding_func
         )
 

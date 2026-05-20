@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, 
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from datetime import datetime
 import os
-import config
+from config import settings
 
 Base = declarative_base()
 
@@ -37,7 +37,9 @@ class SafetyEvent(Base):
     session = relationship("Session", back_populates="events")
 
 class EpisodicMemory:
-    def __init__(self, db_path: str = config.MEMORY_DB_PATH):
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            db_path = settings.memory_db_path
         # Ensure directory exists
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
         self.engine = create_engine(f"sqlite:///{db_path}")

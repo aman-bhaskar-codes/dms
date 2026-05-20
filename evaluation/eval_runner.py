@@ -5,7 +5,7 @@ Runs offline datasets through the pipeline for regression testing.
 import asyncio
 import cv2
 import numpy as np
-from main import FatigueScoreEngine
+from detectors.fatigue_score import FatigueScoreEngine
 from detectors.head_pose import HeadPoseDetector
 from detectors.gaze import GazeTracker
 from detectors.rppg import RPPGEstimator
