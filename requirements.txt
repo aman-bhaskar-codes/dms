@@ -1,0 +1,37 @@
+# Core CV
+mediapipe>=0.10.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Object detection
+ultralytics>=8.0.0
+
+# Audio & Voice (V3)
+pygame>=2.5.0
+pyttsx3>=2.90
+faster-whisper>=1.0.0
+TTS>=0.22.0
+
+# Signal processing
+scipy>=1.11.0
+scikit-learn>=1.3.0
+
+# Memory System (V3)
+chromadb>=0.4.0
+sqlalchemy>=2.0.0
+
+# Agentic Orchestrator (V3)
+langgraph>=0.0.25
+langchain>=0.1.0
+langchain-community>=0.0.10
+
+# UI & Dashboard (V3)
+PyQt6>=6.6.0
+fastapi>=0.109.0
+uvicorn>=0.27.0
+websockets>=12.0
+
+# Analytics window & utilities
+matplotlib>=3.7.0
+requests>=2.31.0
+pillow>=10.0.0

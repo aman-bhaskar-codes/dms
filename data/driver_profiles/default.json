@@ -1,0 +1,11 @@
+{
+  "profile_name": "default",
+  "calibrated_at": "2026-05-19 20:13:22",
+  "ear_baseline": 0.3349,
+  "ear_threshold": 0.261,
+  "mar_baseline": 0.6431,
+  "mar_threshold": 0.75,
+  "pitch_neutral": 10.35,
+  "yaw_neutral": 3.64,
+  "samples": 621
+}
