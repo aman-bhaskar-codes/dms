@@ -1,60 +1,52 @@
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama
-from agents.tools.alert_tools import trigger_alert, voice_warn, suggest_break, escalate, dismiss
-from agents.tools.memory_tools import query_history
-
-SAFETY_SYSTEM_PROMPT = """
-You are an expert driver safety AI operating in real-time.
-You have access to the driver's current biometric data and their full driving history.
-
-Your job:
-1. ASSESS the current risk level using provided metrics + memory context
-2. DECIDE the most appropriate intervention (if any)
-3. EXPLAIN your reasoning in 1 sentence
-4. EXECUTE the intervention via the available tools
-
-Rules:
-- Be direct, brief, non-alarming unless critical
-- Consider the driver's baseline from their profile
-- Compare to similar past events in their history
-- A drowsy driver who has pulled over before needs a harder push
-- Never alert for conditions that are normal for this driver (from profile)
-
-Current Metrics: {metrics}
-Fatigue Score: {fatigue_score}
-Memory Context: {memory_context}
 """
+V5 Safety Agent — Deterministic rules mapping fatigue scores to alerts.
+"""
+import logging
+import time
+from core.bus import EventBus, EventTopic
+from memory.working_memory import WorkingMemory
 
-def get_safety_agent():
-    llm = ChatOllama(model="llama3.2:3b", temperature=0.1)
-    tools = [trigger_alert, voice_warn, suggest_break, escalate, dismiss, query_history]
-    llm_with_tools = llm.bind_tools(tools)
-    
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", SAFETY_SYSTEM_PROMPT),
-        ("human", "Assess the situation and take action if needed.")
-    ])
-    
-    return prompt | llm_with_tools
+logger = logging.getLogger("dms.agents.safety")
 
-def safety_node(state: dict):
-    print(f"\n[ORCHESTRATOR] Routing to Safety Agent (Fatigue: {state['fatigue_score']})")
-    agent = get_safety_agent()
-    response = agent.invoke({
-        "metrics": state["metrics"],
-        "fatigue_score": state["fatigue_score"],
-        "memory_context": state.get("memory_context", "None")
-    })
-    
-    # Process tool calls if any
-    action_taken = "No action"
-    if response.tool_calls:
-        action_taken = f"Executed {len(response.tool_calls)} tools."
-        # In a full implementation, we'd execute the tools here via ToolNode
-    
-    return {
-        "last_agent": "safety_agent",
-        "reasoning": response.content if response.content else "Used tools.",
-        "action_taken": action_taken,
-        "turn": state["turn"] + 1
-    }
+
+class SafetyAgent:
+    """
+    Evaluates fatigue states and fires alerts. 
+    Maintains state to prevent alert spam.
+    """
+    def __init__(self, bus: EventBus, memory: WorkingMemory):
+        self._bus = bus
+        self._memory = memory
+        self._last_alert_time = 0.0
+        self._alert_cooldown = 5.0  # seconds
+
+    async def evaluate(self, payload: dict):
+        score = payload.get("score", 0.0)
+        level = payload.get("level", "safe")
+        
+        if level in ["warning", "critical"]:
+            await self._trigger_alert(level, score)
+
+    async def handle_critical(self, payload: dict):
+        score = payload.get("score", 100.0)
+        await self._trigger_alert("critical", score, bypass_cooldown=True)
+
+    async def _trigger_alert(self, level: str, score: float, bypass_cooldown: bool = False):
+        now = time.time()
+        if not bypass_cooldown and (now - self._last_alert_time) < self._alert_cooldown:
+            return
+
+        self._last_alert_time = now
+        logger.warning(f"[SafetyAgent] Firing {level.upper()} alert! Score: {score}")
+
+        await self._bus.publish(
+            EventTopic.UI_OVERLAY_UPDATE,
+            {"alert": level, "message": f"{level.upper()} FATIGUE DETECTED"},
+            source="safety_agent"
+        )
+        
+        # Audio alert based on severity
+        if level == "critical":
+            await self._bus.publish(EventTopic.VOICE_SPEAK, {"text": "Critical fatigue. Pull over immediately."}, source="safety")
+        elif level == "warning":
+            await self._bus.publish(EventTopic.VOICE_SPEAK, {"text": "You seem tired. Please take a break."}, source="safety")

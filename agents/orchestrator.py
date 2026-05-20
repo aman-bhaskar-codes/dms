@@ -1,60 +1,92 @@
-from typing import TypedDict, Annotated
-from langgraph.graph import StateGraph, END
-import operator
+"""
+V5 Orchestrator — True ReAct Loop based on asyncio.PriorityQueue.
+Replaces LangGraph polling with purely event-driven architecture.
+"""
+import asyncio
+import logging
+from dataclasses import dataclass, field
+from typing import Any
 
-from agents.safety_agent import safety_node
-from agents.memory_agent import memory_node
-from agents.prediction_agent import prediction_node
-from agents.coaching_agent import coaching_node
+from core.bus import EventBus, EventTopic
+from memory.working_memory import WorkingMemory
 
-class AgentState(TypedDict):
-    driver_id: str
-    session_id: str
-    metrics: dict
-    fatigue_score: float
-    fatigue_level: str
-    active_alerts: list
-    last_agent: str
-    reasoning: str
-    memory_context: str
-    action_taken: str
-    turn: int
+logger = logging.getLogger("dms.agents.orchestrator")
 
-def route(state: AgentState) -> str:
-    """Conditional routing based on fatigue score."""
-    fs = state['fatigue_score']
-    if fs >= 70:
-        return 'safety_agent'      # Critical
-    if fs >= 45:
-        return 'prediction_agent'  # Warning
-    if fs >= 25:
-        return 'coaching_agent'    # Mild
-    return 'memory_agent'          # Normal
 
-def create_orchestrator():
-    workflow = StateGraph(AgentState)
-    
-    # Add nodes
-    workflow.add_node("safety_agent", safety_node)
-    workflow.add_node("memory_agent", memory_node)
-    workflow.add_node("prediction_agent", prediction_node)
-    workflow.add_node("coaching_agent", coaching_node)
-    
-    # Entry point relies on conditional routing
-    workflow.set_conditional_entry_point(
-        route,
-        {
-            "safety_agent": "safety_agent",
-            "prediction_agent": "prediction_agent",
-            "coaching_agent": "coaching_agent",
-            "memory_agent": "memory_agent"
-        }
-    )
-    
-    # After any agent acts, the turn ends
-    workflow.add_edge("safety_agent", END)
-    workflow.add_edge("prediction_agent", END)
-    workflow.add_edge("coaching_agent", END)
-    workflow.add_edge("memory_agent", END)
-    
-    return workflow.compile()
+@dataclass(order=True)
+class AgentTask:
+    """Prioritized task for the ReAct loop."""
+    priority: int      # 0 = CRITICAL, 50 = NORMAL, 100 = LOW
+    topic: EventTopic  = field(compare=False)
+    payload: dict      = field(compare=False)
+
+
+class Orchestrator:
+    """
+    Central brain. Subscribes to bus events, places them in priority queue,
+    and dispatches to registered agents.
+    """
+
+    def __init__(self, bus: EventBus, memory: WorkingMemory):
+        self._bus = bus
+        self._memory = memory
+        self._queue: asyncio.PriorityQueue[AgentTask] = asyncio.PriorityQueue()
+        self._agents: dict[str, Any] = {}
+        self._running = False
+        
+        # Core subscriptions
+        self._bus.subscribe(EventTopic.FATIGUE_CRITICAL, self._handle_critical)
+        self._bus.subscribe(EventTopic.FATIGUE_SCORE, self._handle_normal)
+        self._bus.subscribe(EventTopic.VOICE_INTENT, self._handle_voice)
+
+    def register_agent(self, name: str, agent: Any):
+        self._agents[name] = agent
+        logger.info(f"[Orchestrator] Registered agent: {name}")
+
+    async def _handle_critical(self, payload: dict):
+        # Priority 0
+        await self._queue.put(AgentTask(priority=0, topic=EventTopic.FATIGUE_CRITICAL, payload=payload))
+
+    async def _handle_voice(self, payload: dict):
+        # Priority 10
+        await self._queue.put(AgentTask(priority=10, topic=EventTopic.VOICE_INTENT, payload=payload))
+
+    async def _handle_normal(self, payload: dict):
+        # Priority 50
+        # Don't flood the queue; only if empty or significant change
+        if self._queue.qsize() < 10:
+            await self._queue.put(AgentTask(priority=50, topic=EventTopic.FATIGUE_SCORE, payload=payload))
+
+    async def run(self):
+        self._running = True
+        logger.info("[Orchestrator] ReAct loop started.")
+        while self._running:
+            try:
+                task: AgentTask = await asyncio.wait_for(self._queue.get(), timeout=1.0)
+                await self._process_task(task)
+                self._queue.task_done()
+            except asyncio.TimeoutError:
+                continue
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"[Orchestrator] Task processing error: {e}")
+
+    async def _process_task(self, task: AgentTask):
+        """Dispatch task to appropriate agent."""
+        if task.topic == EventTopic.FATIGUE_CRITICAL:
+            if "safety" in self._agents:
+                await self._agents["safety"].handle_critical(task.payload)
+        elif task.topic == EventTopic.FATIGUE_SCORE:
+            if "safety" in self._agents:
+                await self._agents["safety"].evaluate(task.payload)
+        elif task.topic == EventTopic.VOICE_INTENT:
+            # Route voice intents (e.g. "I'm tired" -> find POI)
+            intent = task.payload.get("intent")
+            if intent == "find_poi" and "rag" in self._agents:
+                logger.info(f"[Orchestrator] Dispatching to RAG for POI search")
+                await self._agents["rag"].search(task.payload.get("text"))
+
+    async def shutdown(self):
+        self._running = False
+        logger.info("[Orchestrator] Shutdown complete.")

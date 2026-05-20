@@ -1,88 +1,117 @@
 """
-Thin orchestrator — wires modules to the bus and starts tasks.
-No logic lives here. All logic lives in modules.
+DMS V5 SENTINEL — The Ultimate Agentic Driving Orchestrator
 """
-
 import asyncio
-import signal
 import logging
-from core.bus import bus, EventTopic
+import signal
+import sys
+from pathlib import Path
+
+from core.bus import EventBus, EventTopic
 from core.config import settings
 
-# --- Module imports (each self-registers on import) ---
-# NOTE: These modules will be created in upcoming phases.
-# For Phase 1 testing, we will mock them if they are missing.
-try:
-    from perception.pipeline import PerceptionPipeline
-    from detection.yolo_engine import YOLOEngine
-    from detection.traffic_detector import TrafficDetector
-    from memory.memory_system import MemorySystem
-    from rag.rag_engine import RAGEngine
-    from voice.voice_pipeline import VoicePipeline
-    from agents.orchestrator import AgentOrchestrator
-    from alerts.alert_engine import AlertEngine
-    from ui.web.server import WebServer
-    MODULES_AVAILABLE = True
-except ImportError as e:
-    MODULES_AVAILABLE = False
-    print(f"Warning: Not all V5 modules are available yet ({e}). Running in core-only mode.")
+# Memory
+from memory.working_memory import WorkingMemory
+from memory.episodic import EpisodicMemory
 
-logging.basicConfig(level=logging.INFO,
-    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
-logger = logging.getLogger("dms.main")
+# Perception
+from perception.pipeline import FrameProcessor
+
+# Agents
+from agents.orchestrator import Orchestrator
+from agents.safety_agent import SafetyAgent
+
+# Alerts
+from alerts.alert_engine_v5 import AlertEngineV5
+
+# Voice (Phase 4)
+try:
+    from voice.voice_pipeline import VoicePipeline
+except ImportError:
+    VoicePipeline = None
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+)
+logger = logging.getLogger("dms.main_v5")
 
 
 async def main():
     logger.info("🚗⚡ DMS V5 SENTINEL starting...")
 
-    tasks = [bus.run()]
+    # 1. Initialize Event Bus
+    bus = EventBus()
+    bus_task = asyncio.create_task(bus.run())
 
-    if MODULES_AVAILABLE:
-        # Init all modules — they subscribe to bus in __init__
-        memory   = MemorySystem(bus)
-        rag      = RAGEngine(bus)
-        voice    = VoicePipeline(bus)
-        agents   = AgentOrchestrator(bus)
-        alerts   = AlertEngine(bus)
-        web      = WebServer(bus)
-        percept  = PerceptionPipeline(bus)
-        yolo     = YOLOEngine(bus)
-        traffic  = TrafficDetector(bus)
-        
-        tasks.extend([
-            percept.run(),            # camera → bus
-            yolo.run(),               # background detection
-            traffic.run(),            # traffic context
-            memory.run(),             # persistence
-            rag.run(),                # RAG queries
-            voice.run(),              # STT + TTS
-            agents.run(),             # agent loop
-            alerts.run(),             # alert dispatcher
-            web.run(),                # HTTP + WebSocket server
-        ])
-    else:
-        logger.info("Running Event Bus in isolated mode (Phase 1).")
+    # 2. Initialize Memory Tier
+    working_memory = WorkingMemory()
+    episodic_memory = EpisodicMemory()
+    await episodic_memory.connect()
+    
+    # Generate new session ID
+    import uuid
+    session_id = str(uuid.uuid4())
+    await episodic_memory.log_session_start(session_id, "driver_1")
 
-    # Graceful shutdown
-    loop = asyncio.get_event_loop()
+    # 3. Initialize Perception
+    # (Assuming we have a dummy camera or cv2.VideoCapture loop somewhere,
+    # for now we just initialize the processor)
+    perception = FrameProcessor(bus=bus, kalman_enabled=True)
+    perception_task = asyncio.create_task(perception.run())
+
+    # 4. Initialize Agents
+    orchestrator = Orchestrator(bus=bus, memory=working_memory)
+    safety_agent = SafetyAgent(bus=bus, memory=working_memory)
+    
+    # Register agents to the Orchestrator
+    orchestrator.register_agent("safety", safety_agent)
+    orchestrator_task = asyncio.create_task(orchestrator.run())
+
+    # 5. Initialize Alerts
+    alert_engine = AlertEngineV5(bus=bus)
+    alert_task = asyncio.create_task(alert_engine.start())
+    
+    # 6. Initialize Voice (if available)
+    voice_task = None
+    if VoicePipeline:
+        voice = VoicePipeline(bus=bus)
+        voice_task = asyncio.create_task(voice.run())
+
+    # 7. Initialize UI WebServer
+    from ui.web.server import WebServer
+    web_server = WebServer(bus=bus)
+    web_task = asyncio.create_task(web_server.run())
+
+    # Shutdown Handler
+    shutdown_event = asyncio.Event()
+
     def shutdown_handler():
         logger.info("Shutdown signal received.")
-        asyncio.create_task(
-            bus.publish(EventTopic.SYSTEM_SHUTDOWN, {}, source="main")
-        )
-    
-    try:
+        shutdown_event.set()
+
+    loop = asyncio.get_running_loop()
+    if sys.platform != "win32":
         loop.add_signal_handler(signal.SIGINT, shutdown_handler)
         loop.add_signal_handler(signal.SIGTERM, shutdown_handler)
-    except NotImplementedError:
-        # Add signal handler doesn't work on Windows, safe to ignore for local dev if needed
-        pass
 
-    # Run everything concurrently
-    await asyncio.gather(*tasks)
+    # Wait until shutdown
+    await shutdown_event.wait()
+    logger.info("Shutting down components...")
+
+    # Broadcast shutdown event
+    await bus.publish(EventTopic.SYSTEM_SHUTDOWN, {}, source="main")
+
+    # Gracefully stop components
+    await perception.shutdown()
+    await orchestrator.shutdown()
+    await alert_engine.shutdown()
+    await episodic_memory.close()
+    
+    bus.stop()
+    await bus_task
 
     logger.info("DMS V5 SENTINEL stopped cleanly.")
-
 
 if __name__ == "__main__":
     asyncio.run(main())

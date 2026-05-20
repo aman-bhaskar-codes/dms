@@ -42,6 +42,9 @@ class EventTopic(str, Enum):
     ALERT_TRIGGER      = "alert.trigger"
     ALERT_RESOLVED     = "alert.resolved"
 
+    # UI/Alert events
+    UI_OVERLAY_UPDATE  = "ui.overlay.update"
+
     # Voice events
     VOICE_INPUT_RAW    = "voice.input_raw"       # bytes from mic
     VOICE_TRANSCRIPT   = "voice.transcript"      # str from Whisper

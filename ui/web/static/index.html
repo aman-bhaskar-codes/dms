@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMS V5 SENTINEL | Telemetry Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="overlay-alert" class="hidden">
+        <h1 id="overlay-msg">CRITICAL FATIGUE DETECTED</h1>
+    </div>
+
+    <div class="dashboard">
+        <header>
+            <div class="logo">SENTINEL <span>V5</span></div>
+            <div class="status-indicator">
+                <span class="dot pulse"></span>
+                <span>SYSTEM ONLINE</span>
+            </div>
+        </header>
+
+        <main class="grid-container">
+            <!-- Main Score Dial -->
+            <section class="panel glass score-panel">
+                <h2>OVERALL FATIGUE</h2>
+                <div class="dial-container">
+                    <div class="dial">
+                        <span id="score-val">0.0</span>
+                        <span class="unit">/ 100</span>
+                    </div>
+                </div>
+                <div class="level-indicator" id="level-badge">SAFE</div>
+            </section>
+
+            <!-- 3-Min Prediction Graph -->
+            <section class="panel glass graph-panel">
+                <h2>3-MIN PREDICTION (LSTM)</h2>
+                <div class="chart-container">
+                    <canvas id="predictionChart"></canvas>
+                </div>
+                <div class="stat-row">
+                    <span>Forecast:</span>
+                    <strong id="pred-val" class="text-accent">0.0</strong>
+                </div>
+            </section>
+
+            <!-- Radar Chart Components -->
+            <section class="panel glass radar-panel">
+                <h2>FATIGUE COMPONENTS</h2>
+                <div class="chart-container">
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Head Pose & rPPG -->
+            <section class="panel glass telemetry-panel">
+                <h2>LIVE TELEMETRY</h2>
+                <div class="telemetry-grid">
+                    <div class="stat-box">
+                        <label>HEART RATE</label>
+                        <div class="value"><span id="rppg-val">--</span> <small>BPM</small></div>
+                    </div>
+                    <div class="stat-box">
+                        <label>HEAD PITCH</label>
+                        <div class="value"><span id="pitch-val">0.0</span>&deg;</div>
+                    </div>
+                    <div class="stat-box">
+                        <label>HEAD YAW</label>
+                        <div class="value"><span id="yaw-val">0.0</span>&deg;</div>
+                    </div>
+                    <div class="stat-box">
+                        <label>DOMINANT SIGNAL</label>
+                        <div class="value text-accent" id="dom-signal">--</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
