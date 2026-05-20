@@ -1,9 +1,9 @@
 {
   "driver_id": "drv_v4_test",
-  "ear_threshold": 0.22575635088294246,
-  "ear_open_baseline": 0.28943121908069547,
+  "ear_threshold": 0.1792755082616922,
+  "ear_open_baseline": 0.22984039520729768,
   "mar_threshold": 0.45,
-  "calibration_date": "2026-05-20 20:54",
+  "calibration_date": "2026-05-20 21:08",
   "session_count": 0,
   "total_drive_minutes": 0.0,
   "avg_fatigue_score": 0.0,

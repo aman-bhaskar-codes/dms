@@ -8,11 +8,26 @@ import json
 import cv2
 import threading
 import base64
+import uvicorn
+import numpy as np
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from config import settings
+
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, (np.float32, np.float64)):
+            return float(obj)
+        if isinstance(obj, (np.int32, np.int64)):
+            return int(obj)
+        if isinstance(obj, (np.bool_, bool)):
+            return bool(obj)
+        return super().default(obj)
 
 
 app = FastAPI(title="DMS V4 Dashboard")
@@ -76,7 +91,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 jpg_as_text = base64.b64encode(buffer).decode('utf-8')
                 payload["image"] = f"data:image/jpeg;base64,{jpg_as_text}"
                 
-            await websocket.send_text(json.dumps(payload))
+            await websocket.send_text(json.dumps(payload, cls=NumpyEncoder))
             
     except WebSocketDisconnect:
         print("[Dashboard] Client disconnected")
