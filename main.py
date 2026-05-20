@@ -1,127 +1,206 @@
+"""
+DMS V4 Main Entry Point.
+Coordinates Threaded Web Dashboard, OpenCV Camera Loop, and AI Agents.
+"""
+import asyncio
+import cv2
 import threading
-import uvicorn
 import time
-import random
-from dashboard.web.api_server import app, live_state
-from dashboard.pyqt.main_window import run_gui
-from agents.orchestrator import create_orchestrator
-from memory.memory_manager import MemoryManager
-from voice_agent.voice_agent import VoiceAgent
+import webbrowser
+from config import settings
+from dashboard.web_dashboard import start_server, app as fastapi_app
+from dashboard.overlay import HUDOverlay
+from detectors.face_detector import FaceDetector
+from detectors.ear_detector import EARDetector
+from detectors.mar_detector import MARDetector
+from detectors.head_pose import HeadPoseDetector
+from detectors.perclos import PERCLOSEngine
+from detectors.fatigue_score import FatigueScoreEngine
+from calibration.driver_calibration import DriverCalibration
+from memory.database import DatabaseManager
+from memory.driver_memory import DriverMemory
+from ai.ollama_client import OllamaClient
+from alerts.tts_engine import TTSEngine
+from alerts.telegram_notifier import TelegramNotifier
+from alerts.alert_engine import AlertEngine
 
-def main_perception_loop():
-    """
-    Main loop for V3 DMS.
-    Reads frames, runs detectors, updates WorkingMemory, 
-    triggers Orchestrator, and handles Voice Agent.
-    """
-    import cv2
-    from perception.face_detector import FaceDetector
-    from perception.ear_detector import EARDetector
-    from perception.fatigue_score import FatigueScoreEngine
 
-    driver_id = "drv_8891"
+async def async_main():
+    print("🚗 Starting DMS V4 (Ollama Edition)...")
     
-    # Initialize Memory & Agents
-    memory = MemoryManager(driver_id)
-    orchestrator = create_orchestrator()
-    voice = VoiceAgent(memory.semantic)
+    # 1. Initialize DB and Memory
+    db = DatabaseManager()
+    await db.initialize()
+    memory = DriverMemory(db, driver_id="drv_v4_test")
+    await memory.start_session()
     
-    print("[SYSTEM] Starting DMS V3 with Real Camera...")
+    # 2. Initialize AI & Alerts
+    ollama_client = OllamaClient()
+    tts = TTSEngine()
+    tts.start()
+    telegram = TelegramNotifier()
+    alert_engine = AlertEngine(tts, memory, telegram)
     
-    cap = cv2.VideoCapture(0)
+    # 3. Start FastAPI Dashboard in a background thread
+    print("[SYSTEM] Starting Web Dashboard on http://localhost:8080")
+    web_thread = threading.Thread(target=start_server, daemon=True)
+    web_thread.start()
+    
+    # Give web server a moment to bind
+    await asyncio.sleep(1)
+    
+    # Auto-open dashboard in default web browser
+    webbrowser.open("http://localhost:8080")
+    
+    # 4. Initialize Perception Pipeline
+    print("[SYSTEM] Initializing Camera and Perception Models...")
+    cap = cv2.VideoCapture(settings.camera_index)
+    if not cap.isOpened():
+        print(f"❌ Failed to open camera {settings.camera_index}")
+        return
+
     face_detector = FaceDetector()
     ear_detector = EARDetector()
+    mar_detector = MARDetector()
+    head_pose = HeadPoseDetector()
+    perclos = PERCLOSEngine()
     fatigue_engine = FatigueScoreEngine()
+    hud = HUDOverlay()
     
-    turn = 0
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            time.sleep(0.1)
-            continue
-            
-        frame = cv2.flip(frame, 1)
-        # We need a copy of the frame to pass to the UI safely
-        live_state["frame"] = frame.copy()
-
-        # Run FaceDetector
-        has_face = face_detector.process(frame)
-        current_score = live_state.get("fatigue_score", 0.0)
-        lvl = "normal"
+    # Optional YOLO
+    object_detector = None
+    if settings.yolo_enabled:
+        from detectors.object_detector import ObjectDetector
+        object_detector = ObjectDetector()
+        object_detector.start()
         
-        if has_face:
-            # We draw the mesh for the UI
-            frame = face_detector.draw_mesh(frame)
-            live_state["frame"] = frame.copy()
-            
-            left_eye_indices = [362, 385, 387, 263, 373, 380]
-            right_eye_indices = [33, 160, 158, 133, 153, 144]
-            left_pts = face_detector.get_pixel_coords_batch(left_eye_indices)
-            right_pts = face_detector.get_pixel_coords_batch(right_eye_indices)
-            
-            if left_pts is not None and right_pts is not None:
-                # Update EAR
-                smoothed_ear, state, is_alert = ear_detector.update(left_pts, right_pts)
+    calibration = DriverCalibration("drv_v4_test")
+    if settings.auto_calibrate_on_start:
+        calibration.start_calibration()
+        tts.speak("Starting calibration. Please look forward and blink naturally.", priority=2)
+
+    # State loop variables
+    frame_count = 0
+    last_ai_tip_time = time.time()
+    
+    try:
+        while True:
+            # Check for remote calibration trigger from the dashboard
+            if getattr(fastapi_app.state, "trigger_calibrate", False):
+                fastapi_app.state.trigger_calibrate = False
+                calibration.start_calibration()
+                tts.speak("Starting manual calibration. Please look forward and blink naturally.", priority=2)
+
+            ret, frame = cap.read()
+            if not ret:
+                await asyncio.sleep(0.01)
+                continue
                 
-                # Update Fatigue Score
-                current_score, lvl = fatigue_engine.update(
-                    ear_components=ear_detector.fatigue_components(),
-                    perclos_components={},
-                    head_components={},
-                    mar_components={},
-                    gaze_components={},
-                    rppg_components={}
+            if settings.flip_horizontal:
+                frame = cv2.flip(frame, 1)
+
+            # --- PERCEPTION ---
+            metrics = {}
+            if object_detector:
+                object_detector.submit_frame(frame)
+                metrics["detections"] = object_detector.get_detections()
+                
+            has_face = face_detector.process(frame)
+            if has_face:
+                # Mesh drawing for HUD
+                frame = face_detector.draw_mesh(frame)
+                
+                # EAR
+                ear_data = ear_detector.update(face_detector, calibration)
+                perclos_data = perclos.update(ear_data["ear"])
+                
+                # MAR
+                mar_data = mar_detector.update(face_detector)
+                
+                # Head
+                head_data = head_pose.update(face_detector, frame.shape)
+                
+                # Calibration feed
+                if calibration._collecting:
+                    if calibration.feed(ear_data["ear"], mar_data["mar"]):
+                        tts.speak("Calibration complete. Drive safely.", priority=2)
+                        
+                # Fatigue Fusion
+                fatigue_data = fatigue_engine.update(
+                    ear_data=ear_data,
+                    perclos_data=perclos_data,
+                    mar_data=mar_data,
+                    head_data=head_data,
+                    gaze_data={},
+                    rppg_data={}
                 )
-        else:
-            # If no face, score naturally decays or stays?
-            pass
-        
-
-        live_state["fatigue_score"] = current_score
-        live_state["fatigue_level"] = lvl
-        
-        # Create orchestrator state
-        agent_state = {
-            "driver_id": driver_id,
-            "session_id": memory.session_id,
-            "metrics": live_state,
-            "fatigue_score": current_score,
-            "fatigue_level": lvl,
-            "active_alerts": [],
-            "last_agent": "none",
-            "reasoning": "",
-            "memory_context": "",
-            "action_taken": "",
-            "turn": turn
-        }
-        
-        # Trigger orchestrator (conditionally or on interval)
-        if turn % 5 == 0:  # e.g., run agents every 5 ticks
-            try:
-                # The state graph processes the state and returns the final state
-                final_state = orchestrator.invoke(agent_state)
-                live_state["agent_status"] = f"[{final_state.get('last_agent', 'none')}] {final_state.get('action_taken', '')}"
-            except Exception as e:
-                import traceback
-                print(f"[ORCHESTRATOR ERROR] {e}")
-                traceback.print_exc()
                 
-        turn += 1
+                metrics.update(ear_data)
+                metrics.update(perclos_data)
+                metrics.update(mar_data)
+                metrics.update(head_data)
+                
+                metrics["fatigue_score"] = fatigue_data["score"]
+                metrics["fatigue_level"] = fatigue_data["level"]
+                metrics["prediction_3min"] = fatigue_data["prediction_3min"]
+                
+                memory.update_fatigue(fatigue_data["score"])
+                
+                # --- ALERTS ---
+                if fatigue_data["level"] in ["critical", "warning"]:
+                    await alert_engine.trigger("fatigue", fatigue_data["level"], fatigue_data["score"])
+                
+                if ear_data["state"] == "critical":
+                    await alert_engine.trigger("microsleep", "critical", fatigue_data["score"])
+                    
+                if head_data["state"] == "distracted":
+                    await alert_engine.trigger("distraction", "warning", fatigue_data["score"])
+                    
+            # --- DASHBOARD & OVERLAY ---
+            hud_frame = hud.render(frame, metrics)
+            
+            # Send to FastAPI global state
+            fastapi_app.state.latest_frame = hud_frame
+            fastapi_app.state.latest_metrics = metrics
+            
+            # (Optional) local CV2 show if debugging
+            if settings.DEBUG_MODE:
+                cv2.imshow("DMS V4 Debug HUD", hud_frame)
+                if cv2.waitKey(1) & 0xFF == settings.QUIT_KEY:
+                    break
+
+            # --- AI COACHING (Every 5 mins) ---
+            now = time.time()
+            if now - last_ai_tip_time > (settings.ollama_report_interval_min * 60):
+                last_ai_tip_time = now
+                ctx = await memory.get_session_context()
+                # Run AI tip in background task so it doesn't block camera
+                async def fetch_and_speak_tip():
+                    tip = await ollama_client.get_driving_tip(ctx, metrics)
+                    print(f"[Ollama Tip] {tip}")
+                    await memory.log_ai_tip(ctx, tip)
+                    tts.speak(tip, priority=2)
+                
+                asyncio.create_task(fetch_and_speak_tip())
+
+            # Prevent CPU pegging
+            await asyncio.sleep(0.001)
+
+    except KeyboardInterrupt:
+        print("\n[SYSTEM] Shutting down...")
+    finally:
+        # Cleanup
+        cap.release()
+        face_detector.release()
+        if object_detector:
+            object_detector.stop()
+        tts.stop()
+        cv2.destroyAllWindows()
+        
+        # End session report
+        await memory.end_session()
+        print("[SYSTEM] Goodbye.")
+
 
 if __name__ == "__main__":
-    # 1. Start core perception & agent loop
-    t1 = threading.Thread(target=main_perception_loop, daemon=True)
-    t1.start()
-    
-    # 2. Start FastAPI REST & WebSocket server
-    def run_api():
-        import logging
-        logging.getLogger("uvicorn").setLevel(logging.CRITICAL)
-        uvicorn.run(app, host="0.0.0.0", port=8000, log_level="critical")
-        
-    t2 = threading.Thread(target=run_api, daemon=True)
-    t2.start()
-    
-    # 3. Start PyQt6 UI (Blocking, must be main thread)
-    print("Starting UI on main thread...")
-    run_gui(live_state)
+    asyncio.run(async_main())

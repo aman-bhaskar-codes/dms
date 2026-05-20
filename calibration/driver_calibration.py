@@ -1,195 +1,93 @@
 """
-Driver Calibration Module — Adaptive Per-Driver Baseline
-NEW in V2.
-
-Captures 30 seconds of normal driving to establish:
-  - Personal EAR open baseline (varies ±15% between people)
-  - Personal MAR neutral baseline
-  - Head pose neutral position (some drivers naturally tilt)
-  - Derives personalized alert thresholds
-
-Profile is saved to JSON and auto-loaded on next session.
-
-Usage:
-  cal = DriverCalibration(profile_name="driver1")
-  if not cal.load():
-      cal.start()   # Enters calibration mode
-      # ... call cal.update(ear, mar, pitch, yaw, roll) each frame
-      # ... cal.is_complete() returns True after 30s
-      cal.save()
-  ear_threshold = cal.get_ear_threshold()
+Driver Calibration V2 — 30s baseline capture, per-driver profile save/load.
+Run once per driver. Updates EAR/MAR thresholds to their face geometry.
 """
-
 import json
-import os
 import time
 import numpy as np
-from collections import deque
-import config
+from pathlib import Path
+from dataclasses import dataclass, field, asdict
+from typing import Optional, List
+from config import settings
+
+
+@dataclass
+class DriverProfile:
+    driver_id: str = "default"
+    ear_threshold: float = settings.ear_threshold
+    ear_open_baseline: float = settings.ear_open_baseline
+    mar_threshold: float = settings.mar_threshold
+    calibration_date: str = ""
+    session_count: int = 0
+    total_drive_minutes: float = 0.0
+    avg_fatigue_score: float = 0.0
+    sample_count: int = 0
+    ear_samples: List[float] = field(default_factory=list)
+    mar_samples: List[float] = field(default_factory=list)
 
 
 class DriverCalibration:
-    def __init__(self, profile_name: str = config.DEFAULT_DRIVER_PROFILE):
-        self.profile_name  = profile_name
-        self.profile_path  = os.path.join(
-            config.CALIBRATION_PROFILE_DIR, f"{profile_name}.json")
-        os.makedirs(config.CALIBRATION_PROFILE_DIR, exist_ok=True)
+    def __init__(self, driver_id: str = "default"):
+        self.driver_id = driver_id
+        self.profile = self._load_or_create(driver_id)
+        self._collecting = False
+        self._start_time = 0.0
+        self._ear_buf: List[float] = []
+        self._mar_buf: List[float] = []
+        print(f"[Calibration] Profile '{driver_id}' loaded.")
 
-        self.calibrating      = False
-        self.complete         = False
-        self._start_time      = 0.0
-        self._duration        = config.CALIBRATION_DURATION_SEC
-
-        # Collection buffers
-        self._ear_samples  = deque()
-        self._mar_samples  = deque()
-        self._pitch_samples= deque()
-        self._yaw_samples  = deque()
-
-        # Calibrated values
-        self.ear_baseline    = config.EAR_OPEN_BASELINE
-        self.ear_threshold   = config.EAR_THRESHOLD
-        self.mar_baseline    = 0.20
-        self.mar_threshold   = config.MAR_THRESHOLD
-        self.pitch_neutral   = 0.0
-        self.yaw_neutral     = 0.0
-        self.profile_loaded  = False
-
-        print(f"[Calibration] Profile: {profile_name}  "
-              f"Path: {self.profile_path}")
-
-    def load(self) -> bool:
-        """Load saved profile. Returns True if successful."""
-        if not os.path.exists(self.profile_path):
-            print(f"[Calibration] No profile found at {self.profile_path}.")
-            return False
-        try:
-            with open(self.profile_path, 'r') as f:
-                p = json.load(f)
-            self.ear_baseline  = p.get("ear_baseline",  config.EAR_OPEN_BASELINE)
-            self.ear_threshold = p.get("ear_threshold", config.EAR_THRESHOLD)
-            self.mar_baseline  = p.get("mar_baseline",  0.20)
-            self.mar_threshold = p.get("mar_threshold", config.MAR_THRESHOLD)
-            self.pitch_neutral = p.get("pitch_neutral", 0.0)
-            self.yaw_neutral   = p.get("yaw_neutral",   0.0)
-            self.complete       = True
-            self.profile_loaded = True
-            print(f"[Calibration] Loaded profile '{self.profile_name}'.")
-            print(f"  EAR baseline={self.ear_baseline:.3f}  "
-                  f"threshold={self.ear_threshold:.3f}")
-            return True
-        except Exception as e:
-            print(f"[Calibration] Load failed: {e}")
-            return False
+    def _load_or_create(self, driver_id: str) -> DriverProfile:
+        path = Path(settings.profile_dir) / f"{driver_id}.json"
+        if path.exists():
+            try:
+                with open(path) as f:
+                    data = json.load(f)
+                return DriverProfile(**{k: v for k, v in data.items()
+                                        if k in DriverProfile.__dataclass_fields__})
+            except Exception:
+                pass
+        return DriverProfile(driver_id=driver_id)
 
     def save(self):
-        """Save calibration profile to JSON."""
-        profile = {
-            "profile_name":  self.profile_name,
-            "calibrated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "ear_baseline":  round(self.ear_baseline,  4),
-            "ear_threshold": round(self.ear_threshold, 4),
-            "mar_baseline":  round(self.mar_baseline,  4),
-            "mar_threshold": round(self.mar_threshold, 4),
-            "pitch_neutral": round(self.pitch_neutral, 2),
-            "yaw_neutral":   round(self.yaw_neutral,   2),
-            "samples":       len(self._ear_samples),
-        }
-        with open(self.profile_path, 'w') as f:
-            json.dump(profile, f, indent=2)
-        print(f"[Calibration] Profile saved to {self.profile_path}")
+        path = Path(settings.profile_dir) / f"{self.driver_id}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(asdict(self.profile), f, indent=2)
 
-    def start(self):
-        """Begin calibration capture."""
-        self._ear_samples.clear()
-        self._mar_samples.clear()
-        self._pitch_samples.clear()
-        self._yaw_samples.clear()
-        self.calibrating = True
-        self.complete    = False
+    def start_calibration(self):
+        self._collecting = True
         self._start_time = time.time()
-        print(f"[Calibration] Starting {self._duration}s calibration... "
-              "Look straight ahead, keep eyes open normally.")
+        self._ear_buf.clear()
+        self._mar_buf.clear()
+        print(f"[Calibration] Starting {settings.calibration_duration_sec}s baseline...")
 
-    def update(self, ear: float, mar: float,
-               pitch: float, yaw: float) -> float:
-        """
-        Feed a frame of data during calibration.
-        Returns progress fraction 0.0–1.0.
-        """
-        if not self.calibrating:
-            return 1.0 if self.complete else 0.0
+    def feed(self, ear: float, mar: float) -> bool:
+        """Returns True when calibration complete."""
+        if not self._collecting:
+            return False
+        if ear > 0.1:
+            self._ear_buf.append(ear)
+        if mar < 0.9:
+            self._mar_buf.append(mar)
 
         elapsed = time.time() - self._start_time
-
-        # Only collect samples when driver appears alert (EAR > 0.22)
-        if ear > 0.22:
-            self._ear_samples.append(ear)
-            self._mar_samples.append(mar)
-            self._pitch_samples.append(pitch)
-            self._yaw_samples.append(yaw)
-
-        progress = min(1.0, elapsed / self._duration)
-
-        if elapsed >= self._duration:
+        if elapsed >= settings.calibration_duration_sec:
             self._finalize()
-
-        return progress
+            return True
+        return False
 
     def _finalize(self):
-        """Compute calibrated thresholds from collected samples."""
-        if len(self._ear_samples) < 10:
-            print("[Calibration] Not enough samples. Using defaults.")
-            self.complete   = True
-            self.calibrating = False
-            return
+        if len(self._ear_buf) >= 10:
+            base = float(np.percentile(self._ear_buf, 75))
+            self.profile.ear_open_baseline = base
+            self.profile.ear_threshold = base * 0.78  # 78% of open baseline
+            print(f"  EAR baseline: {base:.3f} → threshold: {self.profile.ear_threshold:.3f}")
+        if len(self._mar_buf) >= 10:
+            base = float(np.percentile(self._mar_buf, 90))
+            self.profile.mar_threshold = min(0.85, max(0.45, base * 1.5))
+            print(f"  MAR threshold: {self.profile.mar_threshold:.3f}")
 
-        ears = np.array(list(self._ear_samples))
-        mars = np.array(list(self._mar_samples))
-        pitches = np.array(list(self._pitch_samples))
-        yaws    = np.array(list(self._yaw_samples))
-
-        # EAR: baseline = 75th percentile (typical open-eye value)
-        # Threshold = 70% of baseline (PERCLOS standard)
-        self.ear_baseline  = float(np.percentile(ears, 75))
-        self.ear_threshold = round(self.ear_baseline * 0.78, 3)
-        self.ear_threshold = max(0.18, min(0.30, self.ear_threshold))
-
-        # MAR: baseline = 75th percentile
-        self.mar_baseline  = float(np.percentile(mars, 75))
-        self.mar_threshold = round(self.mar_baseline + 0.35, 3)
-        self.mar_threshold = max(0.45, min(0.75, self.mar_threshold))
-
-        # Neutral head pose
-        self.pitch_neutral = float(np.median(pitches))
-        self.yaw_neutral   = float(np.median(yaws))
-
-        self.complete    = True
-        self.calibrating = False
-
-        print("[Calibration] Complete!")
-        print(f"  EAR: baseline={self.ear_baseline:.3f}  "
-              f"threshold={self.ear_threshold:.3f}")
-        print(f"  MAR: baseline={self.mar_baseline:.3f}  "
-              f"threshold={self.mar_threshold:.3f}")
-        print(f"  Head neutral: pitch={self.pitch_neutral:.1f}°  "
-              f"yaw={self.yaw_neutral:.1f}°")
-
-    @property
-    def progress(self) -> float:
-        if not self.calibrating:
-            return 1.0 if self.complete else 0.0
-        return min(1.0, (time.time() - self._start_time) / self._duration)
-
-    @property
-    def is_complete(self) -> bool:
-        return self.complete
-
-    @property
-    def status_message(self) -> str:
-        if self.complete:
-            return "Calibrated ✓"
-        if self.calibrating:
-            pct = int(self.progress * 100)
-            return f"Calibrating... {pct}% — Look ahead, eyes open"
-        return "Not calibrated"
+        self.profile.calibration_date = time.strftime("%Y-%m-%d %H:%M")
+        self._collecting = False
+        self.save()
+        print("[Calibration] Complete.")

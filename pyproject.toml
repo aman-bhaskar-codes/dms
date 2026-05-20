@@ -1,0 +1,59 @@
+[project]
+name = "dms-v4"
+version = "0.4.0"
+description = "Driver Monitoring System V4 — Claude API + FastAPI Dashboard"
+requires-python = ">=3.11"
+
+dependencies = [
+    # Core vision
+    "opencv-python>=4.9.0",
+    "mediapipe>=0.10.9",
+    "numpy>=1.26.0",
+
+    # Object detection (optional but included)
+    "ultralytics>=8.1.0",
+
+    # Ollama AI
+    "ollama>=0.2.0",
+
+    # FastAPI dashboard
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.0",
+    "websockets>=12.0",
+
+    # Telegram alerts
+    "python-telegram-bot>=21.0",
+
+    # Voice
+    "pyttsx3>=2.90",
+    "openai-whisper>=20231117",
+
+    # Data
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.3.0",
+    "aiosqlite>=0.20.0",
+
+    # Utils
+    "scipy>=1.13.0",
+    "pillow>=10.3.0",
+    "rich>=13.7.0",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+
+[tool.setuptools]
+packages = ["detectors", "calibration", "memory", "ai", "alerts", "dashboard"]

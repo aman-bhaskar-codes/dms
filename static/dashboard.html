@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMS V4 — Driver Cockpit Telemetry</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: radial-gradient(circle at top left, #0b0f19, #05070c);
+            color: #f1f5f9;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+        }
+        h1, h2, h3, .font-outfit {
+            font-family: 'Outfit', sans-serif;
+        }
+        .glass-panel {
+            background: rgba(13, 18, 30, 0.45);
+            backdrop-filter: blur(16px) saturate(120%);
+            -webkit-backdrop-filter: blur(16px) saturate(120%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-panel:hover {
+            border-color: rgba(96, 165, 250, 0.2);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+        }
+        .glow-blue {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.15);
+        }
+        .glow-red {
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.25);
+            animation: pulse-border 1.5s infinite alternate;
+        }
+        .glow-green {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+        }
+        @keyframes pulse-border {
+            0% { border-color: rgba(239, 68, 68, 0.2); }
+            100% { border-color: rgba(239, 68, 68, 0.6); }
+        }
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        .heart-pulse {
+            animation: heartbeat 0.8s infinite ease-in-out;
+        }
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.3);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.2);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.4);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-5 select-none">
+
+    <!-- Calibration Overlay -->
+    <div id="calibration-overlay" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-2xl transition-all duration-500 opacity-0 pointer-events-none">
+        <div class="glass-panel p-8 rounded-3xl max-w-md w-full mx-4 flex flex-col items-center text-center scale-90 transition-all duration-500" id="calibration-card">
+            <div class="relative w-24 h-24 mb-6">
+                <!-- Circular progress meter -->
+                <svg class="w-full h-full transform -rotate-90">
+                    <circle cx="48" cy="48" r="40" stroke="rgba(255, 255, 255, 0.05)" stroke-width="6" fill="transparent"/>
+                    <circle cx="48" cy="48" r="40" stroke="#3b82f6" stroke-width="6" fill="transparent"
+                            stroke-dasharray="251.2" stroke-dashoffset="251.2" id="calibration-ring"
+                            stroke-linecap="round" class="transition-all duration-100 ease-linear"/>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center font-outfit text-3xl font-black text-blue-400" id="calibration-countdown">30</div>
+            </div>
+            <h3 class="text-xl font-bold font-outfit text-white mb-2">Driver Calibration Active</h3>
+            <p class="text-slate-400 text-sm leading-relaxed mb-4">
+                Please look forward, sit in a natural driving position, and blink naturally while we calibrate sensor baselines.
+            </p>
+            <div class="w-full bg-slate-800/50 h-1.5 rounded-full overflow-hidden">
+                <div id="calibration-bar" class="bg-blue-500 h-full w-0 transition-all duration-100 ease-linear"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-5 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.8)]"></div>
+            <h1 class="text-2xl font-black tracking-wide font-outfit bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-200 to-white">
+                DMS V4 <span class="text-xs font-semibold tracking-widest text-slate-400 uppercase ml-2 border border-slate-800 px-2 py-0.5 rounded-md">Cockpit Twin</span>
+            </h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="triggerCalibration()" class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-slate-300 hover:text-white glass-panel border border-slate-800 bg-slate-900/40 hover:bg-blue-600/20 active:scale-95 transition-all">
+                Recalibrate Driver
+            </button>
+            <div id="connection-status" class="px-3 py-1.5 rounded-xl bg-red-900/20 text-red-400 border border-red-800/30 text-xs font-semibold uppercase tracking-wider transition-all">
+                Offline
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-col xl:flex-row gap-5 flex-1 min-h-0">
+        
+        <!-- Camera HUD & Chart (Left Column) -->
+        <div class="flex-1 flex flex-col gap-5 min-h-0">
+            <!-- Camera Feed -->
+            <div class="flex-1 glass-panel rounded-2xl overflow-hidden relative bg-slate-950 flex items-center justify-center group glow-blue" id="video-panel">
+                <img id="video-feed" class="w-full h-full object-contain transition-opacity duration-300 opacity-60" src="" alt="Driver Camera Frame">
+                
+                <div class="absolute inset-0 flex flex-col items-center justify-center text-slate-500 font-outfit transition-all pointer-events-none" id="feed-fallback">
+                    <svg class="w-12 h-12 mb-3 stroke-current animate-pulse" fill="none" viewBox="0 0 24 24" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                    </svg>
+                    <span class="text-xs uppercase tracking-widest font-bold">Waiting for camera stream...</span>
+                </div>
+
+                <!-- Floating overlay panels -->
+                <div class="absolute top-4 left-4 flex gap-3 pointer-events-none">
+                    <div class="glass-panel rounded-xl px-4 py-2.5 flex items-center gap-3 bg-slate-900/80">
+                        <div class="text-rose-500 shrink-0" id="heart-icon">
+                            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Heart Rate</div>
+                            <div class="text-lg font-black font-outfit text-white leading-none mt-1"><span id="hr-val">--</span> <span class="text-xs font-normal text-slate-400">BPM</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="absolute bottom-4 right-4 pointer-events-none">
+                    <div class="glass-panel rounded-xl px-3 py-1.5 bg-slate-900/60 border-slate-800 text-[10px] uppercase font-bold tracking-widest text-slate-400">
+                        Live Perception HUD
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="h-56 glass-panel rounded-2xl p-4 flex flex-col min-h-0 bg-slate-900/10">
+                <div class="flex justify-between items-center mb-2 shrink-0">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 font-outfit">Biometric Telemetry Stream</h3>
+                    <div class="flex gap-4 text-[10px] font-semibold text-slate-500">
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500"></span> EAR (Eye Ratio)</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-400"></span> Fatigue Score</span>
+                    </div>
+                </div>
+                <div class="flex-1 relative min-h-0">
+                    <canvas id="telemetryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telemetry Cards & AI Context Logs (Right Column) -->
+        <div class="w-full xl:w-96 flex flex-col gap-5 min-h-0 shrink-0">
+            
+            <!-- Giant Fatigue Gauge Card -->
+            <div class="glass-panel rounded-3xl p-6 flex flex-col items-center justify-center relative overflow-hidden bg-slate-900/20 text-center" id="fatigue-card">
+                <div class="absolute -right-16 -top-16 w-36 h-36 bg-blue-500/5 rounded-full blur-3xl"></div>
+                <div class="text-xs text-slate-400 font-bold uppercase tracking-widest mb-3">Driver Fatigue Index</div>
+                <div class="relative flex items-center justify-center mb-1">
+                    <div id="score-val" class="text-7xl font-black font-outfit tracking-tighter text-emerald-400 leading-none">0.0</div>
+                </div>
+                <div id="level-val" class="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-950/40 text-emerald-400 border border-emerald-800/40 mt-3">
+                    NORMAL
+                </div>
+            </div>
+
+            <!-- Dashboard Sub Metrics Cards -->
+            <div class="grid grid-cols-2 gap-4">
+                
+                <!-- EAR Card -->
+                <div class="glass-panel rounded-2xl p-4 bg-slate-900/10">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Eye Aspect (EAR)</div>
+                    <div class="text-2xl font-black font-outfit text-white mt-1.5 leading-none" id="ear-val">0.30</div>
+                    <div class="w-full bg-slate-800/60 h-1 rounded-full overflow-hidden mt-3">
+                        <div id="ear-bar" class="bg-blue-400 h-full w-[60%] transition-all"></div>
+                    </div>
+                </div>
+
+                <!-- PERCLOS Card -->
+                <div class="glass-panel rounded-2xl p-4 bg-slate-900/10">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Closure (PERCLOS)</div>
+                    <div class="text-2xl font-black font-outfit text-white mt-1.5 leading-none" id="perclos-val">0%</div>
+                    <div class="w-full bg-slate-800/60 h-1 rounded-full overflow-hidden mt-3">
+                        <div id="perclos-bar" class="bg-indigo-400 h-full w-0 transition-all"></div>
+                    </div>
+                </div>
+
+                <!-- Yawn Card -->
+                <div class="glass-panel rounded-2xl p-4 bg-slate-900/10">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Yawn Counter</div>
+                    <div class="text-2xl font-black font-outfit text-white mt-1.5 leading-none" id="yawn-val">0</div>
+                    <div class="text-[10px] text-slate-500 mt-2 font-medium">MAR threshold active</div>
+                </div>
+
+                <!-- Trend Prediction Card -->
+                <div class="glass-panel rounded-2xl p-4 bg-slate-900/10">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Prediction (3m)</div>
+                    <div class="text-2xl font-black font-outfit text-slate-400 mt-1.5 leading-none" id="pred-val">Stable</div>
+                    <div class="text-[10px] text-slate-500 mt-2 font-medium" id="pred-status">Fatigue trajectory stable</div>
+                </div>
+
+            </div>
+
+            <!-- Terminal-style Log Terminal -->
+            <div class="glass-panel rounded-3xl p-5 flex-1 flex flex-col min-h-0 bg-slate-950/20">
+                <div class="flex justify-between items-center mb-3 shrink-0">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 font-outfit">AI Session Log & Alerts</h3>
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                </div>
+                <div id="events-log" class="flex-1 overflow-y-auto space-y-2.5 text-xs font-mono min-h-0 pr-1">
+                    <!-- Events injected here -->
+                    <div class="text-slate-500 italic">Waiting for active driver events...</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+        const video = document.getElementById('video-feed');
+        const feedFallback = document.getElementById('feed-fallback');
+        const scoreVal = document.getElementById('score-val');
+        const levelVal = document.getElementById('level-val');
+        const earVal = document.getElementById('ear-val');
+        const earBar = document.getElementById('ear-bar');
+        const perclosVal = document.getElementById('perclos-val');
+        const perclosBar = document.getElementById('perclos-bar');
+        const yawnVal = document.getElementById('yawn-val');
+        const hrVal = document.getElementById('hr-val');
+        const heartIcon = document.getElementById('heart-icon');
+        const predVal = document.getElementById('pred-val');
+        const predStatus = document.getElementById('pred-status');
+        const connStatus = document.getElementById('connection-status');
+        const eventsLog = document.getElementById('events-log');
+        const fatigueCard = document.getElementById('fatigue-card');
+        const calibrationOverlay = document.getElementById('calibration-overlay');
+        const calibrationCard = document.getElementById('calibration-card');
+        const calibrationRing = document.getElementById('calibration-ring');
+        const calibrationCountdown = document.getElementById('calibration-countdown');
+        const calibrationBar = document.getElementById('calibration-bar');
+
+        let isCalibrating = false;
+        let calibrationTimer = null;
+        let calibrationStart = 0;
+
+        // Chart.js Configuration
+        const ctx = document.getElementById('telemetryChart').getContext('2d');
+        const chartData = {
+            labels: Array.from({length: 60}, (_, i) => ''),
+            datasets: [
+                {
+                    label: 'EAR',
+                    data: Array(60).fill(null),
+                    borderColor: '#3b82f6',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: false
+                },
+                {
+                    label: 'Fatigue Score',
+                    data: Array(60).fill(null),
+                    borderColor: '#818cf8',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: false
+                }
+            ]
+        };
+
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.03)' },
+                        ticks: { color: '#64748b', font: { size: 9 } },
+                        min: 0,
+                        max: 1.0
+                    }
+                },
+                animation: { duration: 0 } // High FPS realtime update
+            }
+        });
+
+        // Track seen alerts to prevent redundant UI insertions
+        const seenEvents = new Set();
+
+        ws.onopen = () => {
+            connStatus.textContent = 'Active';
+            connStatus.className = 'px-3 py-1.5 rounded-xl bg-emerald-950/40 text-emerald-400 border border-emerald-800/40 text-xs font-semibold uppercase tracking-wider';
+        };
+
+        ws.onclose = () => {
+            connStatus.textContent = 'Offline';
+            connStatus.className = 'px-3 py-1.5 rounded-xl bg-red-950/40 text-red-400 border border-red-800/40 text-xs font-semibold uppercase tracking-wider';
+            video.classList.add('opacity-0');
+            feedFallback.classList.remove('opacity-0');
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            // Image stream
+            if(data.image) {
+                video.src = data.image;
+                video.classList.remove('opacity-0');
+                video.classList.add('opacity-80');
+                feedFallback.classList.add('opacity-0');
+            }
+
+            // Metrics updates
+            if(data.metrics) {
+                const m = data.metrics;
+                
+                // Update chart
+                chartData.datasets[0].data.shift();
+                chartData.datasets[0].data.push(m.ear !== undefined ? m.ear : null);
+                
+                chartData.datasets[1].data.shift();
+                chartData.datasets[1].data.push(m.fatigue_score !== undefined ? m.fatigue_score / 100.0 : null);
+                
+                chart.update();
+
+                // Fatigue Score
+                if (m.fatigue_score !== undefined) {
+                    const score = m.fatigue_score;
+                    scoreVal.textContent = score.toFixed(1);
+                    levelVal.textContent = m.fatigue_level.toUpperCase();
+                    
+                    // Colors & Animations based on fatigue level
+                    let colorClass = 'text-emerald-400';
+                    let borderClass = 'border-emerald-800/40';
+                    let bgClass = 'bg-emerald-950/40';
+                    
+                    fatigueCard.className = "glass-panel rounded-3xl p-6 flex flex-col items-center justify-center relative overflow-hidden bg-slate-900/20 text-center";
+                    
+                    if (m.fatigue_level === 'critical') {
+                        colorClass = 'text-red-500';
+                        borderClass = 'border-red-800/40';
+                        bgClass = 'bg-red-950/40';
+                        fatigueCard.classList.add('glow-red');
+                    } else if (m.fatigue_level === 'warning') {
+                        colorClass = 'text-amber-500';
+                        borderClass = 'border-amber-800/40';
+                        bgClass = 'bg-amber-950/40';
+                        fatigueCard.classList.add('glow-blue');
+                    } else if (m.fatigue_level === 'mild') {
+                        colorClass = 'text-yellow-400';
+                        borderClass = 'border-yellow-800/40';
+                        bgClass = 'bg-yellow-950/40';
+                    } else {
+                        fatigueCard.classList.add('glow-green');
+                    }
+                    
+                    scoreVal.className = `text-7xl font-black font-outfit tracking-tighter ${colorClass} leading-none`;
+                    levelVal.className = `text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full ${bgClass} ${colorClass} border ${borderClass} mt-3`;
+                }
+
+                // EAR & bars
+                if(m.ear !== undefined) {
+                    earVal.textContent = m.ear.toFixed(2);
+                    const pct = Math.min(100, Math.max(0, m.ear * 250));
+                    earBar.style.width = `${pct}%`;
+                    if(m.state === 'critical') {
+                        earBar.className = "bg-red-500 h-full transition-all";
+                    } else {
+                        earBar.className = "bg-blue-400 h-full transition-all";
+                    }
+                }
+
+                // PERCLOS
+                if(m.perclos !== undefined) {
+                    perclosVal.textContent = (m.perclos * 100).toFixed(0) + '%';
+                    perclosBar.style.width = `${m.perclos * 100}%`;
+                }
+
+                // Yawn rate
+                if(m.yawn_rate !== undefined) {
+                    yawnVal.textContent = m.yawn_rate;
+                }
+
+                // Heart rate pulse
+                if(m.hr_valid && m.hr_bpm) {
+                    hrVal.textContent = m.hr_bpm.toFixed(0);
+                    heartIcon.className = "text-rose-500 shrink-0 heart-pulse";
+                } else {
+                    hrVal.textContent = '--';
+                    heartIcon.className = "text-slate-600 shrink-0";
+                }
+
+                // Prediction 3min
+                if(m.prediction_3min !== null && m.prediction_3min !== undefined) {
+                    predVal.textContent = m.prediction_3min.toFixed(1);
+                    predVal.className = "text-2xl font-black font-outfit text-indigo-300 mt-1.5 leading-none";
+                    if(m.prediction_3min > 60) {
+                        predStatus.textContent = "Fatigue increasing rapidly";
+                        predStatus.className = "text-[10px] text-red-400 mt-2 font-medium";
+                    } else {
+                        predStatus.textContent = "Fatigue stable / low trend";
+                        predStatus.className = "text-[10px] text-slate-500 mt-2 font-medium";
+                    }
+                } else {
+                    predVal.textContent = 'Stable';
+                    predVal.className = "text-2xl font-black font-outfit text-slate-400 mt-1.5 leading-none";
+                    predStatus.textContent = "Telemetry trajectory stable";
+                    predStatus.className = "text-[10px] text-slate-500 mt-2 font-medium";
+                }
+
+                // Add to Event Log if states change
+                logPerceptionState(m);
+            }
+        };
+
+        function logPerceptionState(m) {
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            // Build simple unique state key for deduplication
+            if (m.state === 'critical' && !seenEvents.has(`${now}-microsleep`)) {
+                addLogEntry('CRITICAL', 'Microsleep / Closed Eyes detected.', 'text-red-500', 'bg-red-950/20 border-red-900/30');
+                seenEvents.add(`${now}-microsleep`);
+            }
+            if (m.distraction_duration > 1.5 && !seenEvents.has(`${now}-distract`)) {
+                addLogEntry('WARNING', 'Driver gaze distraction detected.', 'text-amber-500', 'bg-amber-950/20 border-amber-900/30');
+                seenEvents.add(`${now}-distract`);
+            }
+        }
+
+        function addLogEntry(badge, message, textClass, bgClass) {
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const logItem = document.createElement('div');
+            logItem.className = `p-3 rounded-xl border flex flex-col gap-1.5 ${bgClass} transition-all duration-300 transform translate-y-2 opacity-0`;
+            logItem.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="px-2 py-0.5 rounded text-[9px] uppercase tracking-wider font-extrabold ${textClass} bg-slate-900/50">${badge}</span>
+                    <span class="text-[9px] text-slate-500">${now}</span>
+                </div>
+                <div class="text-slate-300 text-[11px] leading-relaxed">${message}</div>
+            `;
+            
+            if (eventsLog.children.length === 1 && eventsLog.children[0].classList.contains('text-slate-500')) {
+                eventsLog.innerHTML = '';
+            }
+
+            eventsLog.prepend(logItem);
+            
+            // Trigger animation
+            setTimeout(() => {
+                logItem.classList.remove('translate-y-2', 'opacity-0');
+            }, 50);
+
+            // Cap logs at 30 entries
+            if(eventsLog.children.length > 30) {
+                eventsLog.removeChild(eventsLog.lastChild);
+            }
+        }
+
+        // Trigger manual calibration
+        async function triggerCalibration() {
+            if(isCalibrating) return;
+            try {
+                const res = await fetch('/api/calibrate', { method: 'POST' });
+                if(res.ok) {
+                    startCalibrationUI();
+                }
+            } catch(e) {
+                console.error("Failed to start calibration:", e);
+            }
+        }
+
+        function startCalibrationUI() {
+            isCalibrating = true;
+            calibrationOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            calibrationCard.classList.remove('scale-90');
+            
+            calibrationStart = Date.now();
+            const duration = 30000; // 30 seconds
+
+            if(calibrationTimer) clearInterval(calibrationTimer);
+            
+            calibrationTimer = setInterval(() => {
+                const elapsed = Date.now() - calibrationStart;
+                const remaining = Math.max(0, Math.ceil((duration - elapsed) / 1000));
+                
+                calibrationCountdown.textContent = remaining;
+                
+                // SVG circular fill
+                const progress = elapsed / duration;
+                const strokeDash = 251.2 * (1 - progress);
+                calibrationRing.style.strokeDashoffset = strokeDash;
+                
+                // Bottom bar fill
+                calibrationBar.style.width = `${progress * 100}%`;
+
+                if(elapsed >= duration) {
+                    stopCalibrationUI();
+                    addLogEntry('SYSTEM', 'Baseline driver calibration completed successfully.', 'text-blue-400', 'bg-blue-950/20 border-blue-900/30');
+                }
+            }, 100);
+        }
+
+        function stopCalibrationUI() {
+            isCalibrating = false;
+            clearInterval(calibrationTimer);
+            calibrationOverlay.classList.add('opacity-0', 'pointer-events-none');
+            calibrationCard.classList.add('scale-90');
+        }
+    </script>
+</body>
+</html>
