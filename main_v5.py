@@ -30,11 +30,62 @@ try:
 except ImportError:
     VoicePipeline = None
 
+from rag.rag_engine import RAGEngine
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s"
 )
 logger = logging.getLogger("dms.main_v5")
+
+
+async def camera_loop(perception: FrameProcessor):
+    import cv2
+    logger.info("[Camera] Initializing OpenCV video capture...")
+    
+    camera_idx = settings.camera_index
+    cap = cv2.VideoCapture(camera_idx)
+    
+    # Check if opened, fallback if needed
+    if not cap.isOpened():
+        logger.warning(f"[Camera] Failed to open camera index {camera_idx}. Retrying index 0...")
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            logger.error("[Camera] Could not open any camera device. Check macOS camera permissions under System Settings > Privacy & Security > Camera.")
+            return
+
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    
+    fps = settings.camera_fps if hasattr(settings, "camera_fps") else 30
+    frame_delay = 1.0 / fps
+    
+    logger.info(f"[Camera] OpenCV capture started on index {camera_idx} at {fps} FPS.")
+    
+    try:
+        while True:
+            t0 = asyncio.get_event_loop().time()
+            ret, frame = cap.read()
+            if not ret:
+                logger.warning("[Camera] Frame read failed. Retrying in 0.5s...")
+                await asyncio.sleep(0.5)
+                continue
+
+            if settings.flip_horizontal:
+                frame = cv2.flip(frame, 1)
+
+            # Submit frame to the perception pipeline (non-blocking thread pool execution)
+            await perception.submit(frame)
+
+            # Dynamic sleep to maintain target frame-rate
+            elapsed = asyncio.get_event_loop().time() - t0
+            sleep_time = max(0.001, frame_delay - elapsed)
+            await asyncio.sleep(sleep_time)
+    except asyncio.CancelledError:
+        logger.info("[Camera] Capture loop cancelled.")
+    finally:
+        cap.release()
+        logger.info("[Camera] OpenCV capture released.")
 
 
 async def main():
@@ -55,30 +106,36 @@ async def main():
     await episodic_memory.log_session_start(session_id, "driver_1")
 
     # 3. Initialize Perception
-    # (Assuming we have a dummy camera or cv2.VideoCapture loop somewhere,
-    # for now we just initialize the processor)
     perception = FrameProcessor(bus=bus, kalman_enabled=True)
     perception_task = asyncio.create_task(perception.run())
 
-    # 4. Initialize Agents
+    # Start Camera capture loop background task
+    camera_task = asyncio.create_task(camera_loop(perception))
+
+    # 4. Initialize RAG Engine
+    rag = RAGEngine(bus=bus)
+    rag_task = asyncio.create_task(rag.run())
+
+    # 5. Initialize Agents
     orchestrator = Orchestrator(bus=bus, memory=working_memory)
     safety_agent = SafetyAgent(bus=bus, memory=working_memory)
     
     # Register agents to the Orchestrator
     orchestrator.register_agent("safety", safety_agent)
+    orchestrator.register_agent("rag", rag)
     orchestrator_task = asyncio.create_task(orchestrator.run())
 
-    # 5. Initialize Alerts
+    # 6. Initialize Alerts
     alert_engine = AlertEngineV5(bus=bus)
     alert_task = asyncio.create_task(alert_engine.start())
     
-    # 6. Initialize Voice (if available)
+    # 7. Initialize Voice (if available)
     voice_task = None
     if VoicePipeline:
         voice = VoicePipeline(bus=bus)
         voice_task = asyncio.create_task(voice.run())
 
-    # 7. Initialize UI WebServer
+    # 8. Initialize UI WebServer
     from ui.web.server import WebServer
     web_server = WebServer(bus=bus)
     web_task = asyncio.create_task(web_server.run())
@@ -103,10 +160,22 @@ async def main():
     await bus.publish(EventTopic.SYSTEM_SHUTDOWN, {}, source="main")
 
     # Gracefully stop components
+    camera_task.cancel()
+    try:
+        await camera_task
+    except asyncio.CancelledError:
+        pass
+
     await perception.shutdown()
     await orchestrator.shutdown()
     await alert_engine.shutdown()
     await episodic_memory.close()
+    
+    if voice_task:
+        voice.stop()
+        voice_task.cancel()
+        
+    await web_server.shutdown()
     
     bus.stop()
     await bus_task

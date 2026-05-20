@@ -69,7 +69,10 @@ const radarChart = new Chart(radarCtx, {
 // WebSocket Connection
 const ws = new WebSocket(`ws://${window.location.host}/ws/telemetry`);
 
-ws.onopen = () => console.log('Connected to V5 Telemetry Stream');
+ws.onopen = () => {
+    console.log('Connected to V5 Telemetry Stream');
+    addConsoleLine('Connected to DMS V5 Sentinel Event Hub');
+};
 
 ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
@@ -82,8 +85,96 @@ ws.onmessage = (event) => {
         document.getElementById('yaw-val').innerText = payload.yaw.toFixed(1);
     } else if (topic === 'UI_OVERLAY_UPDATE') {
         showCriticalAlert(payload.message);
+    } else if (topic === 'FRAME_PROCESSED') {
+        if (payload.image) {
+            document.getElementById('camera-feed').src = payload.image;
+        }
+        if (payload.metrics && payload.metrics.rppg_hr) {
+            document.getElementById('rppg-val').innerText = Math.round(payload.metrics.rppg_hr);
+        }
+    } else if (topic === 'VOICE_TRANSCRIPT') {
+        if (payload.text) {
+            addChatMessage('driver', payload.text);
+        }
+    } else if (topic === 'VOICE_RESPONSE') {
+        if (payload.text) {
+            addChatMessage('sentinel', payload.text);
+        }
+    } else if (topic === 'AGENT_TASK') {
+        if (payload.task) {
+            addConsoleLine(payload.task);
+        }
     }
 };
+
+ws.onerror = (err) => {
+    console.error('WebSocket Error:', err);
+    addConsoleLine('WEBSOCKET ERROR: Failed to connect to telemetry system');
+};
+
+ws.onclose = () => {
+    console.log('Telemetry connection closed');
+    addConsoleLine('SYSTEM OFFLINE: Telemetry server disconnected');
+};
+
+// UI Handlers & Helper Functions
+function addChatMessage(sender, text) {
+    const container = document.getElementById('chat-messages');
+    if (!container) return;
+
+    // Check if duplicate message is already the last element to prevent duplicate rendering
+    const lastBubble = container.lastElementChild;
+    if (lastBubble && lastBubble.classList.contains(sender) && lastBubble.innerText === text) {
+        return;
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${sender}`;
+    bubble.innerText = text;
+    container.appendChild(bubble);
+    container.scrollTop = container.scrollHeight;
+}
+
+function addConsoleLine(task) {
+    const container = document.getElementById('console-container');
+    if (!container) return;
+
+    const timeStr = new Date().toLocaleTimeString();
+    const line = document.createElement('div');
+    line.className = 'console-line';
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'console-time';
+    timeSpan.innerText = `[${timeStr}]`;
+
+    const textNode = document.createTextNode(task);
+
+    line.appendChild(timeSpan);
+    line.appendChild(textNode);
+
+    container.appendChild(line);
+
+    // Limit log lines for performance
+    while (container.childNodes.length > 80) {
+        container.removeChild(container.firstChild);
+    }
+    container.scrollTop = container.scrollHeight;
+}
+
+// Chat input form handling
+document.getElementById('chat-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (text) {
+        // Send typed query to server over websocket
+        ws.send(JSON.stringify({
+            action: 'voice_query',
+            text: text
+        }));
+        input.value = '';
+    }
+});
 
 function updateFatigue(payload) {
     // Score & Level

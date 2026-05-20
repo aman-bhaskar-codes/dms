@@ -319,6 +319,16 @@ Answer (max 3 sentences, spoken aloud):"""
             correlation_id=event.correlation_id
         )
 
+    async def search(self, question: str) -> str:
+        """Compatibility wrapper for direct Orchestrator routing."""
+        answer = await self.query(question, {})
+        await self._bus.publish(
+            EventTopic.VOICE_RESPONSE,
+            {"text": answer},
+            source="rag_engine"
+        )
+        return answer
+
     async def run(self):
         """Build BM25 index on startup, then idle (reactive via bus)."""
         await asyncio.get_event_loop().run_in_executor(None, self._build_bm25)

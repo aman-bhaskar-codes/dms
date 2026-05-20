@@ -22,6 +22,8 @@ from typing import Optional, TypedDict
 import cv2
 import mediapipe as mp
 import numpy as np
+import base64
+
 
 from perception.kalman_bank import VectorizedKalmanBank
 from perception.fatigue_engine_v5 import FatigueEngineV5, FatigueResult
@@ -60,6 +62,8 @@ class RawSignals(TypedDict):
     timestamp: float
     frame_id: int
     face_detected: bool
+    processed_frame: str
+
 
 
 # MediaPipe FaceMesh landmark indices for key regions
@@ -305,6 +309,47 @@ class FrameProcessor:
             # Rough HR proxy (actual CHROM algorithm is in detection/rppg_ensemble.py)
             rppg_hr = max(50.0, min(120.0, 60.0 + (green_mean - 128.0) * 0.3))
 
+        # Draw face mesh overlay on a copy of the frame
+        hud_frame = frame.copy()
+        for lm_pt in lm:
+            cx, cy = int(lm_pt[0] * w), int(lm_pt[1] * h)
+            cv2.circle(hud_frame, (cx, cy), 1, (0, 120, 0), -1)  # sleek deep green mesh dots
+            
+        # Draw eyes and mouth contours in a premium color
+        for eye_pts, color in [(_LEFT_EYE, (0, 255, 255)), (_RIGHT_EYE, (0, 255, 255))]:
+            pts = np.array([[lm[idx][0] * w, lm[idx][1] * h] for idx in eye_pts], dtype=np.int32)
+            cv2.polylines(hud_frame, [pts], True, color, 1, cv2.LINE_AA)
+            
+        for iris_pts, color in [(_LEFT_IRIS, (255, 100, 100)), (_RIGHT_IRIS, (255, 100, 100))]:
+            for idx in iris_pts:
+                cx, cy = int(lm[idx][0] * w), int(lm[idx][1] * h)
+                cv2.circle(hud_frame, (cx, cy), 1, color, -1)
+                
+        mouth_pts = np.array([[lm[idx][0] * w, lm[idx][1] * h] for idx in _MOUTH_OUTER], dtype=np.int32)
+        cv2.polylines(hud_frame, [mouth_pts], True, (0, 255, 0), 1, cv2.LINE_AA)
+        
+        # Nose head pose projection vector
+        nose_pt = lm[1]
+        nx, ny = int(nose_pt[0] * w), int(nose_pt[1] * h)
+        pitch_rad = np.radians(pitch)
+        yaw_rad = np.radians(yaw)
+        end_x = int(nx - np.sin(yaw_rad) * 60)
+        end_y = int(ny + np.sin(pitch_rad) * 60)
+        cv2.line(hud_frame, (nx, ny), (end_x, end_y), (0, 255, 255), 2, cv2.LINE_AA)
+        cv2.circle(hud_frame, (nx, ny), 3, (0, 0, 255), -1)
+        
+        # Telemetry Card at the bottom
+        overlay = hud_frame.copy()
+        cv2.rectangle(overlay, (0, h - 45), (w, h), (0, 0, 0), -1)
+        cv2.addWeighted(overlay, 0.6, hud_frame, 0.4, 0, hud_frame)
+        status_text = f"EAR: {ear:.2f} | MAR: {mar:.2f} | PERCLOS: {perclos:.2f} | Pose: P={pitch:.1f} Y={yaw:.1f}"
+        cv2.putText(hud_frame, status_text, (15, h - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1, cv2.LINE_AA)
+        
+        # Encode to base64 JPEG
+        _, buffer = cv2.imencode('.jpg', hud_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 60])
+        jpg_as_text = base64.b64encode(buffer).decode('utf-8')
+        processed_frame_str = f"data:image/jpeg;base64,{jpg_as_text}"
+
         latency_ms = (time.perf_counter() - t0) * 1000.0
         self._latency_window.append(latency_ms)
 
@@ -328,6 +373,7 @@ class FrameProcessor:
             "timestamp":            time.time(),
             "frame_id":             frame_id,
             "face_detected":        True,
+            "processed_frame":      processed_frame_str,
         }
 
         self._put_signals(signals)
@@ -343,6 +389,14 @@ class FrameProcessor:
                 pass  # Drop stale frame — prefer freshness
 
     def _empty_signals(self, frame_id: int) -> RawSignals:
+        # Generate empty placeholder image so the user is never left with a broken video screen!
+        placeholder = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(placeholder, "NO FACE DETECTED / SEARCHING...", (120, 240), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2, cv2.LINE_AA)
+        _, buffer = cv2.imencode('.jpg', placeholder, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+        jpg_as_text = base64.b64encode(buffer).decode('utf-8')
+        image_data = f"data:image/jpeg;base64,{jpg_as_text}"
+
         return {
             "ear": 0.30, "perclos": 0.0, "blink_velocity": 0.0,
             "slow_blink_ratio": 0.0, "mar": 0.0,
@@ -353,7 +407,9 @@ class FrameProcessor:
             "scene_luminance": 0.5, "scene_glare": 0.0,
             "timestamp": time.time(), "frame_id": frame_id,
             "face_detected": False,
+            "processed_frame": image_data
         }
+
 
     async def run(self) -> None:
         """
@@ -392,6 +448,11 @@ class FrameProcessor:
                 await self._bus.publish(EventTopic.SIGNAL_RPPG,
                                         {"hr_bpm": signals["rppg_hr"]},
                                         source="perception")
+                
+                # Publish the processed frame
+                await self._bus.publish(EventTopic.FRAME_PROCESSED,
+                                        {"image": signals["processed_frame"], "metrics": signals},
+                                        source="perception")
 
                 # Run fatigue fusion
                 result: FatigueResult = self._fatigue_engine.update(signals)
@@ -404,6 +465,11 @@ class FrameProcessor:
             else:
                 await self._bus.publish(EventTopic.FACE_LOST, {},
                                         source="perception")
+                # Also publish empty placeholder frame
+                await self._bus.publish(EventTopic.FRAME_PROCESSED,
+                                        {"image": signals["processed_frame"], "metrics": signals},
+                                        source="perception")
+
 
     @property
     def avg_latency_ms(self) -> float:

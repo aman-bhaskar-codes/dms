@@ -4,10 +4,9 @@ Replaces LangGraph polling with purely event-driven architecture.
 """
 import asyncio
 import logging
-from dataclasses import dataclass, field
 from typing import Any
-
-from core.bus import EventBus, EventTopic
+from dataclasses import dataclass, field, is_dataclass, asdict
+from core.bus import EventBus, EventTopic, Event
 from memory.working_memory import WorkingMemory
 
 logger = logging.getLogger("dms.agents.orchestrator")
@@ -43,18 +42,21 @@ class Orchestrator:
         self._agents[name] = agent
         logger.info(f"[Orchestrator] Registered agent: {name}")
 
-    async def _handle_critical(self, payload: dict):
+    async def _handle_critical(self, event: Event):
         # Priority 0
+        payload = asdict(event.payload) if is_dataclass(event.payload) else event.payload
         await self._queue.put(AgentTask(priority=0, topic=EventTopic.FATIGUE_CRITICAL, payload=payload))
 
-    async def _handle_voice(self, payload: dict):
+    async def _handle_voice(self, event: Event):
         # Priority 10
+        payload = asdict(event.payload) if is_dataclass(event.payload) else event.payload
         await self._queue.put(AgentTask(priority=10, topic=EventTopic.VOICE_INTENT, payload=payload))
 
-    async def _handle_normal(self, payload: dict):
+    async def _handle_normal(self, event: Event):
         # Priority 50
         # Don't flood the queue; only if empty or significant change
         if self._queue.qsize() < 10:
+            payload = asdict(event.payload) if is_dataclass(event.payload) else event.payload
             await self._queue.put(AgentTask(priority=50, topic=EventTopic.FATIGUE_SCORE, payload=payload))
 
     async def run(self):
@@ -74,15 +76,33 @@ class Orchestrator:
 
     async def _process_task(self, task: AgentTask):
         """Dispatch task to appropriate agent."""
+        # Log task receipt to event bus for dashboard visibility
+        await self._bus.publish(
+            EventTopic.AGENT_TASK,
+            {"task": f"[Orchestrator] Dequeued task: {task.topic.name} (Priority {task.priority})"},
+            source="orchestrator"
+        )
+
         if task.topic == EventTopic.FATIGUE_CRITICAL:
             if "safety" in self._agents:
+                await self._bus.publish(
+                    EventTopic.AGENT_TASK,
+                    {"task": "[Orchestrator] Escalating CRITICAL fatigue anomaly to Safety Agent immediately!"},
+                    source="orchestrator"
+                )
                 await self._agents["safety"].handle_critical(task.payload)
         elif task.topic == EventTopic.FATIGUE_SCORE:
             if "safety" in self._agents:
                 await self._agents["safety"].evaluate(task.payload)
         elif task.topic == EventTopic.VOICE_INTENT:
-            # Route voice intents (e.g. "I'm tired" -> find POI)
             intent = task.payload.get("intent")
+            text = task.payload.get("text", "")
+            await self._bus.publish(
+                EventTopic.AGENT_TASK,
+                {"task": f"[Orchestrator] Voice Intent matched: {intent} (Text: '{text}'). Routing query to RAG Engine."},
+                source="orchestrator"
+            )
+            # Route voice intents (e.g. "I'm tired" -> find POI)
             if intent == "find_poi" and "rag" in self._agents:
                 logger.info(f"[Orchestrator] Dispatching to RAG for POI search")
                 await self._agents["rag"].search(task.payload.get("text"))
@@ -90,3 +110,4 @@ class Orchestrator:
     async def shutdown(self):
         self._running = False
         logger.info("[Orchestrator] Shutdown complete.")
+

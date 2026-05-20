@@ -7,7 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pathlib import Path
 
-from core.bus import EventBus, EventTopic
+from typing import Any
+from dataclasses import is_dataclass, asdict
+from core.bus import EventBus, EventTopic, Event
 
 logger = logging.getLogger("dms.ui.server")
 
@@ -43,6 +45,12 @@ class WebServer:
         self.bus.subscribe(EventTopic.SIGNAL_HEAD_POSE, self._broadcast_head_pose)
         self.bus.subscribe(EventTopic.UI_OVERLAY_UPDATE, self._broadcast_overlay)
         
+        # V5 Additions for Full System Integration
+        self.bus.subscribe(EventTopic.FRAME_PROCESSED, self._broadcast_frame_processed)
+        self.bus.subscribe(EventTopic.VOICE_TRANSCRIPT, self._broadcast_voice_transcript)
+        self.bus.subscribe(EventTopic.VOICE_RESPONSE, self._broadcast_voice_response)
+        self.bus.subscribe(EventTopic.AGENT_TASK, self._broadcast_agent_task)
+        
         self.server = None
 
     def _setup_routes(self):
@@ -58,8 +66,22 @@ class WebServer:
             self.active_connections.append(websocket)
             try:
                 while True:
-                    # Keep connection alive
                     data = await websocket.receive_text()
+                    try:
+                        msg = json.loads(data)
+                        if msg.get("action") == "voice_query":
+                            text = msg.get("text", "")
+                            if text:
+                                # Publish the typed voice query to the bus with source="ui"
+                                await self.bus.publish(
+                                    EventTopic.VOICE_TRANSCRIPT,
+                                    {"text": text},
+                                    source="ui"
+                                )
+                    except json.JSONDecodeError:
+                        pass
+                    except Exception as e:
+                        logger.error(f"[WebServer] Failed to handle incoming message: {e}")
             except WebSocketDisconnect:
                 self.active_connections.remove(websocket)
             except Exception as e:
@@ -67,8 +89,18 @@ class WebServer:
                 if websocket in self.active_connections:
                     self.active_connections.remove(websocket)
 
-    async def _broadcast(self, topic: str, payload: dict):
-        message = json.dumps({"topic": topic, "payload": payload})
+    def _sanitize_payload(self, data: Any) -> Any:
+        if is_dataclass(data):
+            return asdict(data)
+        elif isinstance(data, dict):
+            return {k: self._sanitize_payload(v) for k, v in data.items()}
+        elif isinstance(data, list):
+            return [self._sanitize_payload(x) for x in data]
+        return data
+
+    async def _broadcast(self, topic: str, payload: Any):
+        sanitized = self._sanitize_payload(payload)
+        message = json.dumps({"topic": topic, "payload": sanitized})
         stale_connections = []
         for connection in self.active_connections:
             try:
@@ -80,18 +112,30 @@ class WebServer:
             if stale in self.active_connections:
                 self.active_connections.remove(stale)
 
-    async def _broadcast_telemetry(self, payload: dict):
+    async def _broadcast_telemetry(self, event: Event):
         # Throttle telemetry if needed, but for now push directly
-        await self._broadcast(EventTopic.FATIGUE_SCORE.name, payload)
+        await self._broadcast(EventTopic.FATIGUE_SCORE.name, event.payload)
 
-    async def _broadcast_critical(self, payload: dict):
-        await self._broadcast(EventTopic.FATIGUE_CRITICAL.name, payload)
+    async def _broadcast_critical(self, event: Event):
+        await self._broadcast(EventTopic.FATIGUE_CRITICAL.name, event.payload)
         
-    async def _broadcast_head_pose(self, payload: dict):
-        await self._broadcast(EventTopic.SIGNAL_HEAD_POSE.name, payload)
+    async def _broadcast_head_pose(self, event: Event):
+        await self._broadcast(EventTopic.SIGNAL_HEAD_POSE.name, event.payload)
 
-    async def _broadcast_overlay(self, payload: dict):
-        await self._broadcast(EventTopic.UI_OVERLAY_UPDATE.name, payload)
+    async def _broadcast_overlay(self, event: Event):
+        await self._broadcast(EventTopic.UI_OVERLAY_UPDATE.name, event.payload)
+
+    async def _broadcast_frame_processed(self, event: Event):
+        await self._broadcast(EventTopic.FRAME_PROCESSED.name, event.payload)
+
+    async def _broadcast_voice_transcript(self, event: Event):
+        await self._broadcast(EventTopic.VOICE_TRANSCRIPT.name, event.payload)
+
+    async def _broadcast_voice_response(self, event: Event):
+        await self._broadcast(EventTopic.VOICE_RESPONSE.name, event.payload)
+
+    async def _broadcast_agent_task(self, event: Event):
+        await self._broadcast(EventTopic.AGENT_TASK.name, event.payload)
 
     async def run(self):
         config = uvicorn.Config(app=self.app, host=self.host, port=self.port, log_level="warning")

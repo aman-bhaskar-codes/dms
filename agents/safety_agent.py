@@ -40,6 +40,12 @@ class SafetyAgent:
         logger.warning(f"[SafetyAgent] Firing {level.upper()} alert! Score: {score}")
 
         await self._bus.publish(
+            EventTopic.AGENT_TASK,
+            {"task": f"[SafetyAgent] Evaluating biometrics: score={score:.1f}, level={level.upper()}. Firing alert!"},
+            source="safety_agent"
+        )
+
+        await self._bus.publish(
             EventTopic.UI_OVERLAY_UPDATE,
             {"alert": level, "message": f"{level.upper()} FATIGUE DETECTED"},
             source="safety_agent"
@@ -47,6 +53,7 @@ class SafetyAgent:
         
         # Audio alert based on severity
         if level == "critical":
-            await self._bus.publish(EventTopic.VOICE_SPEAK, {"text": "Critical fatigue. Pull over immediately."}, source="safety")
+            await self._bus.publish(EventTopic.VOICE_RESPONSE, {"text": "Critical fatigue. Pull over immediately."}, source="safety")
         elif level == "warning":
-            await self._bus.publish(EventTopic.VOICE_SPEAK, {"text": "You seem tired. Please take a break."}, source="safety")
+            await self._bus.publish(EventTopic.VOICE_RESPONSE, {"text": "You seem tired. Please take a break."}, source="safety")
+

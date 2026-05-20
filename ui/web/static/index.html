@@ -24,6 +24,32 @@
         </header>
 
         <main class="grid-container">
+            <!-- Live Camera HUD & Mesh Overlay -->
+            <section class="panel glass camera-panel">
+                <h2>DRIVER FACE TRACKING & CAMERA HUD</h2>
+                <div class="camera-container">
+                    <img id="camera-feed" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Camera Feed">
+                    <div class="camera-overlay-badge">
+                        <span class="dot pulse"></span>
+                        <span>LIVE STREAM</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sentinel AI Agent Interaction -->
+            <section class="panel glass chat-panel">
+                <h2>SENTINEL VOICE AGENT INTERACTION</h2>
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="chat-bubble sentinel">Hello! I am SENTINEL. How can I help you stay safe today?</div>
+                    </div>
+                    <form class="chat-input-area" id="chat-form">
+                        <input type="text" class="chat-input" id="chat-input" placeholder="Type a message or safety question..." autocomplete="off">
+                        <button type="submit" class="chat-send-btn">Send</button>
+                    </form>
+                </div>
+            </section>
+
             <!-- Main Score Dial -->
             <section class="panel glass score-panel">
                 <h2>OVERALL FATIGUE</h2>
@@ -34,26 +60,6 @@
                     </div>
                 </div>
                 <div class="level-indicator" id="level-badge">SAFE</div>
-            </section>
-
-            <!-- 3-Min Prediction Graph -->
-            <section class="panel glass graph-panel">
-                <h2>3-MIN PREDICTION (LSTM)</h2>
-                <div class="chart-container">
-                    <canvas id="predictionChart"></canvas>
-                </div>
-                <div class="stat-row">
-                    <span>Forecast:</span>
-                    <strong id="pred-val" class="text-accent">0.0</strong>
-                </div>
-            </section>
-
-            <!-- Radar Chart Components -->
-            <section class="panel glass radar-panel">
-                <h2>FATIGUE COMPONENTS</h2>
-                <div class="chart-container">
-                    <canvas id="radarChart"></canvas>
-                </div>
             </section>
 
             <!-- Head Pose & rPPG -->
@@ -76,6 +82,34 @@
                         <label>DOMINANT SIGNAL</label>
                         <div class="value text-accent" id="dom-signal">--</div>
                     </div>
+                </div>
+            </section>
+
+            <!-- Orchestrator Decision & Thoughts Log -->
+            <section class="panel glass console-panel">
+                <h2>ORCHESTRATOR DECISIONS & THOUGHTS LOG</h2>
+                <div class="console-container" id="console-container">
+                    <div class="console-line"><span class="console-time">[SYSTEM]</span>ReAct loop loaded. Awaiting bio-telemetry events...</div>
+                </div>
+            </section>
+
+            <!-- 3-Min Prediction Graph -->
+            <section class="panel glass graph-panel">
+                <h2>3-MIN PREDICTION (LSTM)</h2>
+                <div class="chart-container">
+                    <canvas id="predictionChart"></canvas>
+                </div>
+                <div class="stat-row">
+                    <span>Forecast:</span>
+                    <strong id="pred-val" class="text-accent">0.0</strong>
+                </div>
+            </section>
+
+            <!-- Radar Chart Components -->
+            <section class="panel glass radar-panel">
+                <h2>FATIGUE COMPONENTS</h2>
+                <div class="chart-container">
+                    <canvas id="radarChart"></canvas>
                 </div>
             </section>
         </main>

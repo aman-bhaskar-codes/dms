@@ -77,6 +77,7 @@ class VoicePipeline:
         self._bus.subscribe(EventTopic.FATIGUE_SCORE, self._on_fatigue)
         self._bus.subscribe(EventTopic.MEMORY_READ_RESP, self._on_rag_response)
         self._bus.subscribe(EventTopic.VOICE_RESPONSE, self._on_voice_response)
+        self._bus.subscribe(EventTopic.VOICE_TRANSCRIPT, self._on_transcript_received)
 
     async def _on_traffic(self, event: Event):
         self._latest_traffic = event.payload
@@ -102,6 +103,15 @@ class VoicePipeline:
         if text:
             # Run TTS speak in executor to prevent blocking the event bus dispatch loop
             asyncio.create_task(self._speak(text))
+
+    async def _on_transcript_received(self, event: Event):
+        if event.source != "voice_pipeline":
+            # Direct incoming typed chat query from the dashboard
+            text = event.payload.get("text", "")
+            if text:
+                logger.info(f"[Voice] Processing external typed query from dashboard: '{text}'")
+                await self._process_speech(text)
+
 
     def _load_tts_engine(self):
         if self._tts_engine is not None:
@@ -303,7 +313,7 @@ class VoicePipeline:
         # Build live context (include traffic details if present!)
         live_ctx = {
             "fatigue_score": self._latest_fatigue.score if self._latest_fatigue else 0.0,
-            "fatigue_level": self._latest_fatigue.level.value if self._latest_fatigue else "safe",
+            "fatigue_level": (self._latest_fatigue.level.value if hasattr(self._latest_fatigue.level, "value") else self._latest_fatigue.level) if self._latest_fatigue else "safe",
             "vehicle_density": self._latest_traffic.vehicle_density if self._latest_traffic else 0.0,
             "is_highway": self._latest_traffic.is_highway if self._latest_traffic else False,
             "estimated_speed_kmh": self._latest_traffic.estimated_speed_kmh if self._latest_traffic else 50,
