@@ -25,14 +25,26 @@ class GazeTracker:
         )
 
     def update(self, face_detector) -> dict:
+        FALLBACK = {
+            "gaze_x": 0.0, "state": "unknown",
+            "counter": self.counter, "heatmap": self.heatmap,
+            "confidence": 0.0, "glasses_mode": True
+        }
+        
         l_iris = face_detector.get_pixel_coords_batch(settings.LEFT_IRIS_IDX)
         r_iris = face_detector.get_pixel_coords_batch(settings.RIGHT_IRIS_IDX)
         l_outer = face_detector.get_pixel_coords_batch(settings.LEFT_EYE_OUTER)
         r_outer = face_detector.get_pixel_coords_batch(settings.RIGHT_EYE_OUTER)
 
         if any(x is None for x in [l_iris, r_iris, l_outer, r_outer]):
-            return {"gaze_x": 0.0, "state": self.state, "counter": self.counter,
-                    "heatmap": self.heatmap}
+            self.counter = max(0, self.counter - 1)
+            return FALLBACK
+
+        # Confidence: check if iris points form a reasonable circle (prevent glasses issues)
+        l_spread = float(np.std(l_iris[:, 0]) + np.std(l_iris[:, 1]))
+        if l_spread < 0.5:
+            self.counter = max(0, self.counter - 1)
+            return FALLBACK
 
         gaze_l = gaze_direction(l_iris, l_outer)
         gaze_r = gaze_direction(r_iris, r_outer)
@@ -59,4 +71,5 @@ class GazeTracker:
         return {
             "gaze_x": gaze_x, "state": state,
             "counter": self.counter, "heatmap": self.heatmap.copy(),
+            "confidence": 1.0, "glasses_mode": False
         }

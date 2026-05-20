@@ -30,10 +30,13 @@ class RPPGEstimator:
         x1, y1 = max(0, x1), max(0, y1)
         x2, y2 = min(w, x2), min(h, y2)
 
-        if x2 <= x1 or y2 <= y1:
-            return {"hr_bpm": self.hr_bpm, "hr_valid": self.hr_valid, "hr_state": "no_roi"}
+        if x2 <= x1 + 5 or y2 <= y1 + 5:  # minimum 5px ROI
+            return {"hr_bpm": self.hr_bpm, "hr_valid": False, "hr_state": "no_roi"}
 
         roi = frame_bgr[y1:y2, x1:x2]
+        if roi.size == 0 or np.any(np.isnan(roi)):
+            return {"hr_bpm": self.hr_bpm, "hr_valid": False, "hr_state": "invalid_roi"}
+            
         green_mean = float(np.mean(roi[:, :, 1]))  # Green channel
         self._green_signal.append(green_mean)
         self._frame_count += 1

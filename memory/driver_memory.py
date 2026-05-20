@@ -49,12 +49,24 @@ class DriverMemory:
         if not self.session_id:
             return "No active session."
         
-        events = await self.db.get_recent_events(self.session_id, limit=10)
+        events = await self.db.get_recent_events(self.session_id, limit=5)
+        tips = await self.db.get_recent_ai_tips(self.session_id, limit=2)
+        summary = await self.db.get_session_summary(self.session_id)
+        
+        context = f"Session Summary: {summary.get('total_alerts', 0)} critical/high alerts so far.\n\n"
+        
         if not events:
-            return "Driver has been driving steadily with no major incidents."
-            
-        context = "Recent events in this session:\n"
-        for e in events:
-            mins_ago = (time.time() - e['timestamp']) / 60
-            context += f"- {mins_ago:.1f} min ago: {e['event_type']} (Severity: {e['severity']}, Fatigue: {e['fatigue_score']:.1f})\n"
+            context += "Recent events: Driver has been driving steadily with no major incidents.\n"
+        else:
+            context += "Recent events:\n"
+            for e in events:
+                mins_ago = (time.time() - e['timestamp']) / 60
+                context += f"- {mins_ago:.1f} min ago: {e['event_type']} (Severity: {e['severity']}, Fatigue: {e['fatigue_score']:.1f})\n"
+                
+        if tips:
+            context += "\nPreviously given advice (DO NOT REPEAT THESE):\n"
+            for t in tips:
+                mins_ago = (time.time() - t['timestamp']) / 60
+                context += f"- {mins_ago:.1f} min ago: {t['tip_text']}\n"
+                
         return context

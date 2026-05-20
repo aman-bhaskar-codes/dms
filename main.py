@@ -14,12 +14,16 @@ from detectors.face_detector import FaceDetector
 from detectors.ear_detector import EARDetector
 from detectors.mar_detector import MARDetector
 from detectors.head_pose import HeadPoseDetector
+from detectors.gaze import GazeTracker
+from detectors.rppg import RPPGEstimator
 from detectors.perclos import PERCLOSEngine
 from detectors.fatigue_score import FatigueScoreEngine
 from calibration.driver_calibration import DriverCalibration
 from memory.database import DatabaseManager
 from memory.driver_memory import DriverMemory
 from ai.ollama_client import OllamaClient
+from voice_agent.cognition import VoiceCognitionAgent
+from observability.tracer import tracer
 from alerts.tts_engine import TTSEngine
 from alerts.telegram_notifier import TelegramNotifier
 from alerts.alert_engine import AlertEngine
@@ -63,8 +67,12 @@ async def async_main():
     ear_detector = EARDetector()
     mar_detector = MARDetector()
     head_pose = HeadPoseDetector()
+    gaze_tracker = GazeTracker()
+    rppg_estimator = RPPGEstimator()
     perclos = PERCLOSEngine()
     fatigue_engine = FatigueScoreEngine()
+    voice_agent = VoiceCognitionAgent()
+    asyncio.create_task(voice_agent.listen())
     hud = HUDOverlay()
     
     # Optional YOLO
@@ -110,6 +118,8 @@ async def async_main():
                 # Mesh drawing for HUD
                 frame = face_detector.draw_mesh(frame)
                 
+                tracer.start("perception")
+                
                 # EAR
                 ear_data = ear_detector.update(face_detector, calibration)
                 perclos_data = perclos.update(ear_data["ear"])
@@ -118,10 +128,20 @@ async def async_main():
                 mar_data = mar_detector.update(face_detector)
                 
                 # Head
-                head_data = head_pose.update(face_detector, frame.shape)
+                head_data = head_pose.update(face_detector, frame)
+                
+                # Gaze
+                gaze_data = gaze_tracker.update(face_detector)
+                
+                # rPPG
+                fh_pts = face_detector.get_pixel_coords_batch(getattr(settings, "FOREHEAD_PTS", [10, 338, 297, 332, 284, 109, 67, 103, 54]))
+                rppg_data = rppg_estimator.update(frame, fh_pts)
+                
+                tracer.end("perception")
                 
                 # Calibration feed
                 if calibration._collecting:
+                    perclos.set_baseline(ear_data["ear"])
                     if calibration.feed(ear_data["ear"], mar_data["mar"]):
                         tts.speak("Calibration complete. Drive safely.", priority=2)
                         
@@ -131,14 +151,20 @@ async def async_main():
                     perclos_data=perclos_data,
                     mar_data=mar_data,
                     head_data=head_data,
-                    gaze_data={},
-                    rppg_data={}
+                    gaze_data=gaze_data,
+                    rppg_data=rppg_data
                 )
+                
+                # Audit
+                tracer.audit_signals(gaze_data, head_data, rppg_data, perclos_data["perclos"])
                 
                 metrics.update(ear_data)
                 metrics.update(perclos_data)
                 metrics.update(mar_data)
                 metrics.update(head_data)
+                metrics.update(gaze_data)
+                metrics.update(rppg_data)
+                metrics["latency_ms"] = tracer.get_metrics().get("perception", 0.0)
                 
                 metrics["fatigue_score"] = fatigue_data["score"]
                 metrics["fatigue_level"] = fatigue_data["level"]

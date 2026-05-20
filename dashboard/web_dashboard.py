@@ -6,6 +6,7 @@ Replaces PyQt6 for cross-platform, zero-install viewing.
 import asyncio
 import json
 import cv2
+import threading
 import base64
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
@@ -17,6 +18,7 @@ from config import settings
 app = FastAPI(title="DMS V4 Dashboard")
 
 # Global state to share between main camera thread and FastAPI
+app.state.lock = threading.Lock()
 app.state.latest_frame = None
 app.state.latest_metrics = {}
 app.state.trigger_calibrate = False
@@ -47,8 +49,9 @@ async def websocket_endpoint(websocket: WebSocket):
             await asyncio.sleep(1.0 / settings.target_fps)
             
             # Send metrics
-            metrics = app.state.latest_metrics
-            frame = app.state.latest_frame
+            with app.state.lock:
+                metrics = app.state.latest_metrics.copy() if app.state.latest_metrics else {}
+                frame = app.state.latest_frame.copy() if app.state.latest_frame is not None else None
             
             payload = {"metrics": metrics, "image": None}
             

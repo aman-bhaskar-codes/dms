@@ -18,9 +18,33 @@ class HeadPoseDetector:
         self._prev_pitch = 0.0
         self.distracted_counter = 0
         self.sway_score = 0.0
+        self._prev_gray = None
 
-    def update(self, face_detector, frame_shape: tuple) -> dict:
-        h, w = frame_shape[:2]
+    def _estimate_camera_motion(self, frame_gray: np.ndarray) -> float:
+        """Estimate global camera motion using sparse optical flow."""
+        if self._prev_gray is None:
+            self._prev_gray = frame_gray
+            return 0.0
+        
+        corners = cv2.goodFeaturesToTrack(self._prev_gray, 50, 0.01, 10)
+        if corners is None:
+            return 0.0
+        
+        new_pts, status, _ = cv2.calcOpticalFlowPyrLK(
+            self._prev_gray, frame_gray, corners, None
+        )
+        
+        if new_pts is not None and status is not None:
+            good_old = corners[status.flatten() == 1]
+            good_new = new_pts[status.flatten() == 1]
+            if len(good_old) > 5:
+                motion = float(np.mean(np.linalg.norm(good_new - good_old, axis=1)))
+                self._prev_gray = frame_gray
+                return motion
+        return 0.0
+
+    def update(self, face_detector, frame: np.ndarray) -> dict:
+        h, w = frame.shape[:2]
         pts_2d = face_detector.get_pixel_coords_batch(self._lm_ids)
         if pts_2d is None:
             return {"pitch": 0.0, "yaw": 0.0, "roll": 0.0,
@@ -62,9 +86,15 @@ class HeadPoseDetector:
         self._pitch_history.append(pitch)
         self._yaw_history.append(yaw)
         if len(self._pitch_history) >= 10:
-            self.sway_score = float(
+            raw_sway = float(
                 np.std(list(self._pitch_history)) + np.std(list(self._yaw_history))
             )
+            if len(frame.shape) == 3:
+                frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            else:
+                frame_gray = frame
+            camera_motion = self._estimate_camera_motion(frame_gray)
+            self.sway_score = max(0.0, raw_sway - camera_motion * 2.0)
 
         # State
         nod_down = pitch > settings.pitch_down_thresh

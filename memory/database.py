@@ -113,3 +113,27 @@ class DatabaseManager:
             )
             rows = await cursor.fetchall()
             return [dict(row) for row in reversed(rows)]
+
+    async def get_recent_ai_tips(self, session_id: int, limit: int = 5) -> List[Dict]:
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                """
+                SELECT * FROM ai_tips 
+                WHERE session_id = ? 
+                ORDER BY timestamp DESC LIMIT ?
+                """,
+                (session_id, limit)
+            )
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+            
+    async def get_session_summary(self, session_id: int) -> Dict:
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT COUNT(*) as alert_count FROM events WHERE session_id = ? AND severity IN ('medium', 'high', 'critical')",
+                (session_id,)
+            )
+            row = await cursor.fetchone()
+            return {"total_alerts": row["alert_count"] if row else 0}
