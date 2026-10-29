@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import re
 import time
 from datetime import datetime, timezone
 from typing import Literal
@@ -50,21 +51,21 @@ class GeminiProvider:
                     timeout=14000, retry_options=types.HttpRetryOptions(attempts=1)
                 ),
             )
-        response = await self.client.aio.models.generate_content(
+        response = await self.client.aio.interactions.create(
             model=self.model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                max_output_tokens=512,
-                temperature=None if self.model.startswith("gemini-3") else 0.2,
-                thinking_config=(
-                    types.ThinkingConfig(
-                        thinking_level="MINIMAL" if "flash-lite" in self.model else "LOW"
-                    )
-                    if self.model.startswith("gemini-3")
-                    else None
-                ),
-                response_mime_type="application/json",
-                response_schema={
+            input=prompt,
+            store=False,
+            service_tier="standard",
+            timeout=14,
+            generation_config={
+                "max_output_tokens": 512,
+                "thinking_level": "minimal" if "flash-lite" in self.model else "low",
+                "thinking_summaries": "none",
+            },
+            response_format={
+                "type": "text",
+                "mime_type": "application/json",
+                "schema": {
                     "type": "object",
                     "properties": {
                         "answer": {"type": "string"},
@@ -72,9 +73,9 @@ class GeminiProvider:
                     },
                     "required": ["answer", "citations"],
                 },
-            ),
+            },
         )
-        return json.loads(response.text)
+        return json.loads(response.output_text)
 
     async def close(self):
         if self.client:
@@ -87,17 +88,69 @@ class AssistantService:
         store,
         knowledge,
         api_key="",
-        model="gemini-3.8-flash",
+        model="gemini-3.5-flash-lite",
         daily_cap=20,
         interval=10,
         provider=None,
     ):
         self.store, self.knowledge = store, knowledge
+        self.model = model
+        self.last_source = None
+        self.last_limitation = ""
+        self.closed = False
         self.provider = provider or (GeminiProvider(api_key, model) if api_key else None)
         self.daily_cap, self.interval = min(20, daily_cap), max(10, interval)
         self.queue = asyncio.Queue(maxsize=3)
         self.task = None
         self.active = False
+
+    @staticmethod
+    def citations(docs):
+        return [
+            dict(
+                id=d["id"],
+                title=d["title"],
+                section=d["section"],
+                source=d["source"],
+                url="/api/v1/knowledge/" + d["id"],
+            )
+            for d in docs
+        ]
+
+    def guidance(self, docs, limitation=""):
+        if not docs:
+            return AssistantResponse(
+                answer="I do not have supporting information in the approved local knowledge base. Try fatigue, rest, calibration, or monitoring limitations.",
+                limitation=limitation or "No supporting excerpts",
+            )
+        # Verbatim excerpts, not invented model output, remain useful during outages.
+        excerpts = [re.sub(r"^#{1,6}\s+", "", d["content"].strip(), flags=re.M) for d in docs[:2]]
+        return AssistantResponse(
+            answer="Local guidance from approved sources:\n\n" + "\n\n".join(excerpts),
+            citations=self.citations(docs[:2]),
+            limitation=limitation,
+        )
+
+    async def answer_question(self, text, snapshot=None):
+        normalized = text.strip().lower()
+        if not normalized:
+            return AssistantResponse(
+                answer="Enter a question about fatigue, rest, calibration, or monitoring."
+            )
+        if re.search(r"\b(status|score)\b", normalized):
+            return self.local(snapshot)
+        if any(word in normalized for word in ("tired", "sleepy", "drowsy")):
+            docs = await asyncio.to_thread(self.knowledge.search, "fatigue rest")
+            return AssistantResponse(
+                answer="If you feel tired, stop at a safe place and take a break. Do not use the monitoring score to decide whether you can drive.",
+                citations=self.citations(docs[:2]),
+            )
+        if any(word in normalized for word in ("pulse", "heart rate", "heartbeat")):
+            return AssistantResponse(
+                answer="Sentinel does not measure heart rate. It monitors visible facial geometry only."
+            )
+        docs = await asyncio.to_thread(self.knowledge.search, normalized)
+        return self.guidance(docs)
 
     def start(self):
         self.task = asyncio.create_task(self._worker())
@@ -113,13 +166,19 @@ class AssistantService:
         return AssistantResponse(answer=answer)
 
     async def answer(self, request, snapshot=None):
+        if self.closed:
+            return AssistantResponse(
+                answer="Assistant settings are reloading. Try again shortly.",
+                limitation="Reload in progress",
+            )
         if request.mode == "local":
             return self.local(snapshot)
         if self.provider is None:
-            return AssistantResponse(
-                answer="Local monitoring remains available. Gemini is not configured.",
-                limitation="Set GEMINI_API_KEY in the backend environment to enable general guidance.",
+            question = (
+                TOPICS[request.topic] if request.mode == "general" else SCENARIOS[request.scenario]
             )
+            docs = await asyncio.to_thread(self.knowledge.search, question)
+            return self.guidance(docs, "Gemini is not configured; showing local guidance.")
         if self.task is None:
             self.start()
         future = asyncio.get_running_loop().create_future()
@@ -137,6 +196,8 @@ class AssistantService:
             try:
                 self.active = True
                 response = await self._generate(request)
+                self.last_source = response.source
+                self.last_limitation = response.limitation
                 if not future.done():
                     future.set_result(response)
             except asyncio.CancelledError:
@@ -171,9 +232,9 @@ class AssistantService:
             )
         day = datetime.now(timezone.utc).date().isoformat()
         if not await self.store.reserve_usage(day, self.daily_cap, self.interval, time.time()):
-            return AssistantResponse(
-                answer="The local Gemini usage limit has been reached. Local monitoring continues.",
-                limitation="Daily cap or request interval",
+            return self.guidance(
+                docs,
+                "Gemini local usage limit reached (daily cap or request interval); showing local guidance.",
             )
         context = [{"id": d["id"], "excerpt": d["content"]} for d in docs]
         prompt = (
@@ -189,7 +250,7 @@ class AssistantService:
                 try:
                     return await self.provider.generate(prompt)
                 except Exception as error:
-                    code = getattr(error, "code", getattr(error, "status_code", 0))
+                    code = getattr(error, "status_code", getattr(error, "code", 0))
                     if i or code not in (500, 502, 503, 504):
                         raise
                     # Count each outbound attempt and respect the same spacing as new requests.
@@ -231,13 +292,23 @@ class AssistantService:
                 citations=citations,
                 usage={"requests_today": await self.store.usage(day)},
             )
-        except Exception:
-            return AssistantResponse(
-                answer="General guidance is unavailable. Local monitoring and reports continue.",
-                limitation="Gemini timeout, quota, or invalid cited response",
-            )
+        except Exception as error:
+            code = getattr(error, "status_code", getattr(error, "code", None))
+            reason = {
+                400: "request configuration rejected",
+                401: "key not accepted",
+                403: "project access denied",
+                404: "configured model unavailable",
+                429: "provider quota reached",
+                500: "provider temporarily unavailable",
+                502: "provider temporarily unavailable",
+                503: "provider busy",
+                504: "provider timed out",
+            }.get(code, "timeout or invalid cited response")
+            return self.guidance(docs, f"Gemini {reason}; showing local guidance.")
 
     async def close(self):
+        self.closed = True
         if self.task:
             self.task.cancel()
             await asyncio.gather(self.task, return_exceptions=True)

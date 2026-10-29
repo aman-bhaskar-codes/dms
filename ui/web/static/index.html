@@ -290,7 +290,7 @@
                   id="local-question"
                   maxlength="1000"
                   rows="3"
-                  placeholder="Ask about status, fatigue, breaks, or calibration"
+                  placeholder="Ask about status, fatigue, breaks, calibration, or demo limitations"
                 ></textarea>
                 <div class="inline-buttons">
                   <button disabled class="secondary" type="submit">
@@ -311,6 +311,17 @@
             </article>
             <article class="panel">
               <h2>Gemini guidance</h2>
+              <p id="assistant-status" class="caption" role="status">
+                Checking backend readiness…
+              </p>
+              <button
+                disabled
+                id="reload-assistant"
+                class="quiet"
+                type="button"
+              >
+                Reload assistant settings
+              </button>
               <p class="caption">
                 Only the selected general topic or predefined artificial
                 scenario is sent to Gemini. No free-form driver input.

@@ -49,6 +49,7 @@ class Runtime:
         self.bus_task = None
         self.recorder_task = None
         self.maintenance_task = None
+        self.knowledge_task = None
         self.records = asyncio.Queue(maxsize=256)
         self.last_recorded = -float("inf")
         self.calibration_saved = False
@@ -79,12 +80,15 @@ class Runtime:
             raise
         await self.store.cleanup(self.config.retention_days)
         self.knowledge.ingest()
-        if self.config.embedding_path.is_dir():
-            await asyncio.to_thread(self.knowledge.enable_dense)
         self.audio.start()
         self.bus_task = asyncio.create_task(self.bus.run())
         self.recorder_task = asyncio.create_task(self._record())
         self.maintenance_task = asyncio.create_task(self._maintenance())
+        if self.config.embedding_path.is_dir():
+            self.knowledge.status = "lexical; dense model loading"
+            self.knowledge_task = asyncio.create_task(
+                asyncio.to_thread(self.knowledge.enable_dense)
+            )
 
     async def _maintenance(self):
         cleanup_at = time.monotonic()
@@ -358,6 +362,8 @@ class Runtime:
         if self.recorder_task:
             self.recorder_task.cancel()
             await asyncio.gather(self.recorder_task, return_exceptions=True)
+        if self.knowledge_task:
+            await asyncio.gather(self.knowledge_task, return_exceptions=True)
         await self.store.close()
         if self.instance_lock:
             self.instance_lock.close()

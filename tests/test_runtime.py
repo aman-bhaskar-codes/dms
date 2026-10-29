@@ -196,3 +196,74 @@ async def test_idle_preview_exits_when_browser_disconnects(tmp_path):
     browser = ClosedBrowser()
     await asyncio.wait_for(endpoint(browser), 0.2)
     assert browser.closed
+
+
+async def test_optional_dense_loading_does_not_delay_core_startup(tmp_path, monkeypatch):
+    import time
+    from rag.knowledge import KnowledgeBase
+
+    model = tmp_path / "present-model"
+    model.mkdir()
+
+    def slow_load(self):
+        time.sleep(0.25)
+        self.status = "hybrid"
+
+    monkeypatch.setattr(KnowledgeBase, "enable_dense", slow_load)
+    runtime = Runtime(Settings(data_dir=tmp_path, embedding_path=model, audio_enabled=False))
+    try:
+        started = time.monotonic()
+        await runtime.open()
+        assert time.monotonic() - started < 0.15
+        assert runtime.audio.task is not None
+    finally:
+        await runtime.close()
+
+
+def test_assistant_status_and_reload_never_expose_key(tmp_path, monkeypatch):
+    import ui.web.server as server
+
+    fresh = Settings(
+        data_dir=tmp_path, audio_enabled=False, gemini_api_key="private-test-placeholder"
+    )
+    with TestClient(
+        create_app(Settings(data_dir=tmp_path, audio_enabled=False, gemini_api_key=""))
+    ) as client:
+        assert client.get("/api/v1/assistant/status").json()["configured"] is False
+        monkeypatch.setattr(server, "Settings", lambda: fresh)
+        result = client.post("/api/v1/assistant/reload")
+        assert result.status_code == 200
+        assert result.json()["configured"] is True
+        assert "private-test-placeholder" not in result.text
+        assert client.get("/api/v1/health").json()["session_id"] is None
+
+
+async def test_concurrent_assistant_reloads_close_each_instance_once(tmp_path, monkeypatch):
+    import ui.web.server as server
+
+    app = create_app(Settings(data_dir=tmp_path, audio_enabled=False))
+    runtime = app.state.runtime
+    await runtime.open()
+    original = runtime.assistant
+    original_close = original.close
+    calls = 0
+
+    async def slow_close():
+        nonlocal calls
+        calls += 1
+        await asyncio.sleep(0.03)
+        await original_close()
+
+    original.close = slow_close
+    fresh = Settings(data_dir=tmp_path, audio_enabled=False, gemini_api_key="")
+    monkeypatch.setattr(server, "Settings", lambda: fresh)
+    endpoint = next(
+        route.endpoint
+        for route in app.routes
+        if getattr(route, "path", None) == "/api/v1/assistant/reload"
+    )
+    try:
+        await asyncio.gather(endpoint(), endpoint())
+        assert calls == 1
+    finally:
+        await runtime.close()

@@ -242,16 +242,73 @@ async def test_gemini3_request_uses_low_reasoning_for_bounded_latency(model, lev
 
     observed = {}
 
-    class Models:
-        async def generate_content(self, **kwargs):
+    class Interactions:
+        async def create(self, **kwargs):
             observed.update(kwargs)
             return SimpleNamespace(
-                text='{"answer":"General rest guidance.","citations":["source"]}'
+                output_text='{"answer":"General rest guidance.","citations":["source"]}'
             )
 
     provider = GeminiProvider("test-placeholder-not-a-key", model)
-    provider.client = SimpleNamespace(aio=SimpleNamespace(models=Models()))
+    provider.client = SimpleNamespace(aio=SimpleNamespace(interactions=Interactions()))
     result = await provider.generate("General safety question only")
     assert result["answer"] == "General rest guidance."
-    assert observed["config"].thinking_config.thinking_level == level
-    assert observed["config"].temperature is None
+    assert observed["generation_config"]["thinking_level"].upper() == level
+    assert "temperature" not in observed["generation_config"]
+    assert observed["store"] is False
+    assert observed["service_tier"] == "standard"
+    assert observed["generation_config"]["max_output_tokens"] == 512
+
+
+async def test_cloud_outage_returns_cited_local_guidance(tmp_path):
+    (tmp_path / "guide.md").write_text(
+        "---\ntitle: Approved rest guide\nsource: local-approved\nrevision: 2026-10-29\n---\nFatigue requires a safe rest stop. Adequate sleep matters before driving."
+    )
+    store = Store(tmp_path / "fallback.db")
+    await store.connect()
+    kb = KnowledgeBase(tmp_path)
+    kb.ingest()
+
+    class Busy(Exception):
+        code = 503
+
+    class Provider:
+        async def generate(self, prompt):
+            raise Busy()
+
+    service = AssistantService(store, kb, provider=Provider(), daily_cap=1)
+    try:
+        result = await service.answer(AssistantRequest(mode="general", topic="fatigue"))
+        assert result.source == "local"
+        assert "safe rest stop" in result.answer
+        assert result.citations
+        assert "Gemini" in result.limitation
+    finally:
+        await service.close()
+        await store.close()
+
+
+async def test_local_question_retrieves_evidence_without_cloud(tmp_path):
+    (tmp_path / "guide.md").write_text(
+        "Calibration needs even lighting and a frontal face for twenty seconds."
+    )
+    store = Store(tmp_path / "local.db")
+    await store.connect()
+    kb = KnowledgeBase(tmp_path)
+    kb.ingest()
+    service = AssistantService(store, kb, api_key="")
+    try:
+        result = await service.answer_question("How does calibration use lighting?")
+        assert result.source == "local" and result.citations
+        assert "lighting" in result.answer
+        assert await store.usage("2000-01-01") == 0
+    finally:
+        await service.close()
+        await store.close()
+
+
+def test_unrelated_question_does_not_match_only_stopwords(tmp_path):
+    (tmp_path / "guide.md").write_text("The calibration guide explains the camera and the driver.")
+    kb = KnowledgeBase(tmp_path)
+    kb.ingest()
+    assert kb.search("What is the capital of France?") == []

@@ -31,14 +31,41 @@ with sync_playwright() as p:
     page.locator("#assistant-answer").get_by_text(
         "Monitoring has no valid current measurement.", exact=False
     ).wait_for()
+    page.get_by_label("Local question", exact=True).fill("How should calibration use lighting?")
+    page.get_by_role("button", name="Ask locally", exact=True).click()
+    page.locator("#citations details").first.wait_for()
+    page.locator("#citations summary").first.click()
+    page.locator("#citations details[open] p").wait_for()
+    page.get_by_role("button", name="Reload assistant settings", exact=True).click()
+    page.get_by_text(
+        "Assistant settings reloaded. Your monitoring session is unchanged.", exact=True
+    ).wait_for()
     page.get_by_role("button", name="Settings", exact=True).click()
     page.get_by_role("heading", name="Make Sentinel yours.").wait_for()
+    original_settings = page.request.get(base + "/api/v1/settings").json()
     page.get_by_label("Warning threshold").fill("90")
     page.get_by_label("Critical threshold").fill("70")
     page.get_by_role("button", name="Save settings", exact=True).click()
     page.locator("#settings-message").get_by_text(
         "Invalid settings or threshold order", exact=True
     ).wait_for()
+    for key, value in original_settings.items():
+        if key != "audio_enabled":
+            page.locator("#" + key).fill(str(value))
+        else:
+            page.locator("#" + key).set_checked(value)
+    page.get_by_role("button", name="Save settings", exact=True).click()
+    page.get_by_text("Settings saved. They apply to your next session.", exact=True).wait_for()
+    page.get_by_role("button", name="History", exact=True).click()
+    before = page.locator(".history-row").count()
+    page.locator(".history-row").first.get_by_role("button", name="Delete", exact=False).click()
+    page.get_by_role("dialog").wait_for()
+    page.get_by_role("button", name="Cancel", exact=True).click()
+    assert page.locator(".history-row").count() == before
+    page.locator(".history-row").first.get_by_role("button", name="Delete", exact=False).click()
+    page.get_by_role("button", name="Delete session", exact=True).click()
+    page.get_by_text("Session and its measurements deleted.", exact=True).wait_for()
+    assert page.locator(".history-row").count() == before - 1
     page.get_by_role("button", name="Live", exact=True).click()
 
     for width, height in [(1280, 800), (640, 900), (640, 400)]:

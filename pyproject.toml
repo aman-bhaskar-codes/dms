@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gemini = ["google-genai>=1,<2"]
+gemini = ["google-genai>=2,<3"]
 voice = ["faster-whisper>=1.1,<2", "sounddevice>=0.5,<1"]
 knowledge = ["sentence-transformers>=3,<6", "chromadb>=1,<2", "rank-bm25>=0.2,<1"]
 

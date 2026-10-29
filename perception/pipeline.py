@@ -12,6 +12,22 @@ _RIGHT_EYE = [33, 160, 158, 133, 153, 144]
 _MOUTH_OUTER = [61, 291, 0, 17, 78, 308, 13, 14]
 
 
+def fit_frame(frame, width, height):
+    """Letterbox native camera modes into the configured inference size without distortion."""
+    h, w = frame.shape[:2]
+    if (w, h) == (width, height):
+        return frame
+    scale = min(width / w, height / h)
+    new_w, new_h = max(1, round(w * scale)), max(1, round(h * scale))
+    resized = cv2.resize(
+        frame, (new_w, new_h), interpolation=cv2.INTER_AREA if scale < 1 else cv2.INTER_LINEAR
+    )
+    fitted = np.zeros((height, width, 3), dtype=frame.dtype)
+    y, x = (height - new_h) // 2, (width - new_w) // 2
+    fitted[y : y + new_h, x : x + new_w] = resized
+    return fitted
+
+
 def _ear(pts: np.ndarray) -> float:
     """Eye Aspect Ratio — Soukupová & Čech 2016."""
     A = np.linalg.norm(pts[1] - pts[5])
@@ -34,11 +50,11 @@ def _head_pose_euler(lm_3d: np.ndarray, frame_shape: tuple) -> tuple[float, floa
     model_pts = np.array(
         [
             [0.0, 0.0, 0.0],  # nose tip
-            [0.0, -330.0, -65.0],  # chin
-            [-225.0, 170.0, -135.0],  # left eye corner
-            [225.0, 170.0, -135.0],  # right eye corner
-            [-150.0, -150.0, -125.0],  # left mouth
-            [150.0, -150.0, -125.0],  # right mouth
+            [0.0, 330.0, 65.0],  # chin
+            [-225.0, -170.0, 135.0],  # left eye corner
+            [225.0, -170.0, 135.0],  # right eye corner
+            [-150.0, 150.0, 125.0],  # left mouth
+            [150.0, 150.0, 125.0],  # right mouth
         ],
         dtype=np.float64,
     )
@@ -70,6 +86,7 @@ class FrameProcessor:
         frame, frame_id, captured_at = packet
         if time.time() - captured_at > self.config.max_frame_age_s:
             return None
+        frame = fit_frame(frame, self.config.camera_width, self.config.camera_height)
         import mediapipe as mp
 
         if self.detector is None:

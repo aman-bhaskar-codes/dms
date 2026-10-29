@@ -23,15 +23,18 @@ class LocalVoice:
 
     def _record(self):
         import sounddevice as sd
-        from faster_whisper import WhisperModel
 
         if self.model is None:
+            from faster_whisper import WhisperModel
+
             self.model = WhisperModel(
                 str(self.path), device="cpu", compute_type="int8", local_files_only=True
             )
         audio = sd.rec(5 * 16000, samplerate=16000, channels=1, dtype="float32")
         sd.wait()
-        segments, _ = self.model.transcribe(audio[:, 0], language="en", beam_size=1)
+        segments, _ = self.model.transcribe(
+            audio[:, 0], language="en", beam_size=1, vad_filter=True
+        )
         return " ".join(s.text for s in segments).strip()[:1000]
 
 

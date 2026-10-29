@@ -104,7 +104,14 @@ def setup_models(config, knowledge=False, voice=False):
 
         info = HfApi().model_info(manifest()[name]["repository"])
         snapshot_download(
-            repo_id=manifest()[name]["repository"], revision=info.sha, local_dir=target
+            repo_id=manifest()[name]["repository"],
+            revision=info.sha,
+            local_dir=target,
+            allow_patterns=(
+                ["*.json", "*.txt", "*.safetensors", "1_Pooling/*", "README.md", "LICENSE*"]
+                if name == "embeddings"
+                else ["model.bin", "*.json", "*.txt", "README.md", "LICENSE*"]
+            ),
         )
         installed[name] = dict(
             repository=manifest()[name]["repository"],

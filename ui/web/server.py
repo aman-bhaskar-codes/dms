@@ -6,6 +6,7 @@ import html
 import io
 import json
 import time
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
@@ -16,10 +17,9 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel, ConfigDict
 
-from ai.assistant import AssistantRequest
+from ai.assistant import AssistantRequest, AssistantService
 from core.config import Settings
 from core.runtime import Runtime
-from voice.local import local_intent
 
 
 class SessionRequest(BaseModel):
@@ -35,6 +35,7 @@ class LocalQuestion(BaseModel):
 def create_app(config=None):
     config = config or Settings()
     runtime = Runtime(config)
+    assistant_reload_lock = asyncio.Lock()
 
     @asynccontextmanager
     async def lifespan(app):
@@ -88,7 +89,7 @@ def create_app(config=None):
     async def setup():
         from core.setup import check_setup
 
-        return await asyncio.to_thread(check_setup, config)
+        return await asyncio.to_thread(check_setup, runtime.config)
 
     @app.post("/api/v1/sessions")
     async def start(body: SessionRequest):
@@ -170,6 +171,54 @@ def create_app(config=None):
             headers=headers,
         )
 
+    @app.get("/api/v1/assistant/status")
+    async def assistant_status():
+        day = datetime.now(timezone.utc).date().isoformat()
+        return dict(
+            configured=runtime.assistant.provider is not None,
+            model=runtime.assistant.model,
+            requests_today=await runtime.store.usage(day),
+            daily_cap=runtime.assistant.daily_cap,
+            interval_seconds=runtime.assistant.interval,
+            knowledge=runtime.knowledge.status,
+            last_source=runtime.assistant.last_source,
+            last_limitation=runtime.assistant.last_limitation,
+        )
+
+    @app.post("/api/v1/assistant/reload")
+    async def reload_assistant():
+        async with assistant_reload_lock:
+            if runtime.assistant.active or not runtime.assistant.queue.empty():
+                raise HTTPException(
+                    409, "Wait for the current assistant request before reloading settings"
+                )
+            try:
+                fresh = Settings()
+            except ValueError as error:
+                raise HTTPException(422, "Check the backend environment configuration") from error
+            previous = runtime.assistant
+            await previous.close()
+            runtime.assistant = AssistantService(
+                runtime.store,
+                runtime.knowledge,
+                api_key=fresh.gemini_api_key.get_secret_value(),
+                model=fresh.gemini_model,
+                daily_cap=fresh.gemini_daily_cap,
+                interval=fresh.gemini_interval_s,
+            )
+            runtime.config = runtime.config.model_copy(
+                update={
+                    key: getattr(fresh, key)
+                    for key in (
+                        "gemini_api_key",
+                        "gemini_model",
+                        "gemini_daily_cap",
+                        "gemini_interval_s",
+                    )
+                }
+            )
+            return await assistant_status()
+
     @app.post("/api/v1/assistant")
     async def assistant(body: AssistantRequest):
         return await runtime.assistant.answer(body, runtime.snapshot)
@@ -184,15 +233,15 @@ def create_app(config=None):
             ) from error
         except Exception as error:
             raise HTTPException(503, "Microphone capture or local transcription failed") from error
-        answer = local_intent(transcript, runtime.snapshot)
-        runtime.audio.speak(answer)
-        return {"transcript": transcript, "answer": answer, "source": "local"}
+        response = await runtime.assistant.answer_question(transcript, runtime.snapshot)
+        runtime.audio.speak(response.answer[:600])
+        return {"transcript": transcript, **response.model_dump()}
 
     @app.post("/api/v1/voice/local")
     async def typed(body: LocalQuestion):
         if len(body.text) > 1000:
             raise HTTPException(422, "Keep local questions below 1000 characters")
-        return {"answer": local_intent(body.text, runtime.snapshot), "source": "local"}
+        return await runtime.assistant.answer_question(body.text, runtime.snapshot)
 
     @app.post("/api/v1/audio/test")
     async def audio_test():

@@ -14,40 +14,26 @@ See the final implementation ledger for command results and docs/design/premium-
 
 Hardware acceptance targets remain: 15 processed frames/s at 640×480, capture-to-state P95 <200 ms, safety-to-audio-dispatch P95 <100 ms, and a 60-minute physical-camera soak without sustained memory growth. Report target failures rather than reducing model accuracy silently.
 
-## Checks requiring local hardware or credentials
+## Recorded verification — 2026-10-29
 
-- Real webcam permissions, calibrated face geometry, glasses/lighting variation, camera unplug/replug and measured FPS.
-- Microphone permission, speech transcription quality and audible critical preemption.
-- Live Gemini model availability, current free quota and human review of answer grounding.
-- Full one-hour camera soak and device-driver shutdown behavior.
+The current automated suite covers monitoring, alerts, queue isolation, SQLite history and exports, quota/privacy/citations, assistant reload concurrency, local question retrieval, voice VAD, neutral head pose, camera sizing, and background optional-model startup. Chromium verified replay-to-report, local cited answers and excerpt expansion, assistant reload, settings validation/restoration, history deletion/cancel, responsive layout, keyboard focus and reduced motion; no page errors. Static premium UI audit returned zero findings.
 
-No API key was supplied during implementation. No live cloud inference or camera recording is required for automated checks. Optional dense/voice models must be explicitly installed; missing extras are a supported degraded mode.
+### Live local hardware
 
-## Recorded results — 2026-10-29
+- A 15.05-second webcam run processed 350 frames: **23.26 FPS**, **22.72 ms P95 capture-to-state latency**, with no component errors. Camera frames were resized/letterboxed to configured 640×480 before inference; no raw frames were saved or uploaded.
+- MacBook Air microphone and speakers were detected. A short microphone capture succeeded and was discarded. Local Whisper transcribed an artificial macOS speech sentence correctly. Silence with VAD produced an empty transcript. Local audible speech completed without an audio-worker error.
+- Local SentenceTransformer/Chroma retrieval loaded successfully offline and returned supporting safety documents. Optional dense loading now runs in the background so core startup remains available.
 
-| Check | Result |
-| --- | --- |
-| Full Python suite, native model smoke included | 33 passed |
-| Ruff lint / formatting | Passed |
-| Focused mypy | Passed |
-| JavaScript syntax / Prettier | Passed |
-| Chromium acceptance flow | Passed; no page errors |
-| Premium static UI audit | Zero findings |
-| Signal-policy load test | 108000 frames / 3600 simulated seconds; see benchmark.json |
-| Real-time synthetic smoke | 30 seconds; no component errors; see soak-smoke.json |
+### Live Gemini
 
-The signal-policy benchmark is not a vision FPS measurement, and the 30-second smoke is not the required one-hour physical-camera soak. Do not promote this implementation candidate to a real-driver release using these results alone.
+The key authenticated. The legacy SDK and generation path were replaced with official google-genai SDK 2 Interactions requests, `store=False`, standard service tier, structured JSON output, and bounded retries/timeouts. The configured/default model is gemini-3.5-flash-lite.
 
-Independent code review findings were fixed with regression tests: integer legacy session IDs, per-attempt Gemini retry accounting, and inherited mouth-opening geometry. A later regression check also made nonzero audio subprocess exits visible in health status.
+A real application request returned a generated calibration answer with one validated supporting citation in 11.79 seconds. Other live requests encountered provider availability/deadline failures; the dashboard returned actual local excerpts and citations, clearly marked local. Cloud availability is therefore not guaranteed. Only curated general questions and approved excerpts were sent; no video, audio, biometric values, driver history, or arbitrary transcripts were sent. Usage counters were preserved, and the key remains ignored by Git.
 
-Idle preview disconnection has a regression test; sender and disconnect watcher are cancelled and awaited together, so closed idle sockets cannot retain the runtime during server shutdown.
+### Remaining physical acceptance
 
-A real temporary Uvicorn process accepted and closed an idle preview WebSocket, then completed graceful shutdown in 0.182 seconds. This integration check used no camera, microphone, or cloud API.
+A full human calibration, glasses/lighting variation, camera disconnect/reconnect, audible critical interruption under real use, and a one-hour physical-camera/memory soak still require supervised acceptance. The short camera measurement is not an accuracy study or a one-hour soak. Accelerated signal-policy results (108000 frames/3600 simulated seconds) and the prior 30-second real-time synthetic smoke remain in benchmark.json and soak-smoke.json.
 
-## Live Gemini key check — 2026-10-29
+Native MediaPipe aborts under the restricted macOS automation sandbox; native-enabled regression runs are the relevant result. No product security policy was weakened for browser tests.
 
-The configured key authenticated for model listing. Google rejected generation with gemini-2.5-flash because it is no longer available to new users and recommended gemini-3.8-flash. Updated the default, environment template and local model setting to gemini-3.8-flash. Gemini 3 requests use documented reasoning settings (LOW for Flash, MINIMAL for Flash-Lite) without deprecated temperature overrides.
-
-No successful generated answer was verified: live Flash attempts returned deadline/time-out responses (504), and a diagnostic Flash-Lite attempt reported high demand (503). Requests used only the predefined general fatigue question and approved knowledge excerpts, with persisted application limits. No camera, biometric, transcript or trip data was sent. Further live retries were stopped. The active local monitoring session was not restarted.
-
-Post-update verification: 35 Python tests passed; Ruff, formatting and focused mypy passed. API key remains in the ignored local .env and was never included in test output or Git.
+Final checks: **44 Python tests passed** with native permissions; Ruff lint/format, focused mypy, JavaScript syntax, Git whitespace checks, Chromium acceptance, and strict static UI audit passed. Moved-checkout executable entry points were reinstalled for the current path.

@@ -39,3 +39,41 @@ def test_mouth_ratio_tracks_opening_not_lip_thickness():
         [[0, 0], [100, 0], [50, -35], [50, 35], [0, 0], [0, 0], [50, -32], [50, 32]], dtype=float
     )
     assert _mar(opened) > _mar(closed) * 5
+
+
+def test_head_pose_frontal_geometry_is_zero_for_calibration():
+    import cv2
+    import numpy as np
+    from perception.pipeline import _head_pose_euler
+
+    face = np.array(
+        [
+            [0, 0, 0],
+            [0, 330, 65],
+            [-225, -170, 135],
+            [225, -170, 135],
+            [-150, 150, 125],
+            [150, 150, 125],
+        ],
+        dtype=np.float64,
+    )
+    camera = np.array([[640, 0, 320], [0, 640, 240], [0, 0, 1]], dtype=np.float64)
+    projected, _ = cv2.projectPoints(
+        face, np.zeros(3), np.array([0.0, 0.0, 1400.0]), camera, np.zeros(4)
+    )
+    landmarks = np.zeros((478, 3), dtype=np.float32)
+    for index, point in zip([1, 152, 226, 446, 57, 287], projected[:, 0]):
+        landmarks[index, :2] = point / [640, 480]
+    pitch, yaw, roll = _head_pose_euler(landmarks, (480, 640))
+    assert abs(pitch) < 1 and abs(yaw) < 1 and abs(roll) < 1
+
+
+def test_camera_frame_fit_preserves_aspect_ratio():
+    import numpy as np
+    from perception.pipeline import fit_frame
+
+    frame = np.full((720, 1280, 3), 255, dtype=np.uint8)
+    fitted = fit_frame(frame, 640, 480)
+    assert fitted.shape == (480, 640, 3)
+    occupied = np.where(fitted[:, :, 0].max(axis=1) > 0)[0]
+    assert len(occupied) == 360

@@ -8,7 +8,55 @@ from pathlib import Path
 
 
 def tokens(text):
-    return re.findall(r"[a-z]{3,}", text.lower())
+    stopwords = {
+        "the",
+        "and",
+        "for",
+        "with",
+        "that",
+        "this",
+        "from",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "why",
+        "how",
+        "can",
+        "could",
+        "should",
+        "would",
+        "does",
+        "did",
+        "are",
+        "was",
+        "were",
+        "have",
+        "has",
+        "had",
+        "your",
+        "you",
+        "our",
+        "about",
+        "into",
+        "only",
+        "not",
+        "but",
+        "its",
+        "than",
+        "then",
+        "their",
+        "they",
+        "get",
+        "all",
+        "any",
+        "use",
+        "using",
+        "before",
+        "after",
+    }
+    return [token for token in re.findall(r"[a-z]{3,}", text.lower()) if token not in stopwords]
 
 
 class KnowledgeBase:
@@ -77,9 +125,11 @@ class KnowledgeBase:
             import chromadb
             from sentence_transformers import SentenceTransformer
 
-            self.embedder = SentenceTransformer(str(self.embedding_path), local_files_only=True)
+            self.embedder = SentenceTransformer(
+                str(self.embedding_path), local_files_only=True, device="cpu"
+            )
             self.dense = chromadb.PersistentClient(
-                path=str(self.index_path)
+                path=str(self.index_path), settings=chromadb.Settings(anonymized_telemetry=False)
             ).get_or_create_collection("sentinel-approved-v1", metadata={"hnsw:space": "cosine"})
             self._sync_dense()
             self.status = "hybrid"
@@ -126,7 +176,7 @@ class KnowledgeBase:
                 scored.append((score, doc["id"]))
         scored.sort(reverse=True)
         ranks = {identity: 1 / (61 + i) for i, (_, identity) in enumerate(scored[:20])}
-        if self.dense and self.docs:
+        if self.dense and self.docs and self.status == "hybrid":
             result = self.dense.query(
                 query_embeddings=self.embedder.encode([query]).tolist(),
                 n_results=min(20, len(self.docs)),

@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     embedding_path: Path = ROOT / "models" / "all-MiniLM-L6-v2"
     whisper_path: Path = ROOT / "models" / "whisper-base-en"
     gemini_api_key: SecretStr = SecretStr("")
-    gemini_model: str = "gemini-3.8-flash"
+    gemini_model: str = "gemini-3.5-flash-lite"
     gemini_daily_cap: int = Field(20, ge=0, le=20)
     gemini_interval_s: float = Field(10, ge=10)
     fatigue_warn_threshold: float = Field(55, ge=1, le=95)

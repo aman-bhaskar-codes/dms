@@ -81,6 +81,8 @@ function route(name, focus = true) {
   if (name === "history") loadHistory().catch((e) => notice(e.message));
   if (name === "setup") loadSetup().catch((e) => notice(e.message));
   if (name === "settings") loadSettings().catch((e) => notice(e.message));
+  if (name === "assistant")
+    loadAssistantStatus().catch((e) => notice(e.message));
 }
 for (const button of document.querySelectorAll("[data-view]"))
   button.addEventListener("click", () => route(button.dataset.view));
@@ -330,10 +332,24 @@ $("calibrate").onclick = () =>
       "Calibration started. Keep your face frontal and your eyes naturally open.",
     );
   });
+async function loadAssistantStatus() {
+  const status = await api("/assistant/status");
+  $("assistant-status").textContent =
+    `${status.configured ? "Key loaded" : "Local guidance available; key not loaded"} · ${status.model} · ${status.requests_today}/${status.daily_cap} attempts today · ${status.knowledge}`;
+}
+$("reload-assistant").onclick = () =>
+  busy($("reload-assistant"), async () => {
+    await api("/assistant/reload", { method: "POST" });
+    await loadAssistantStatus();
+    notice(
+      "Assistant settings reloaded. Your monitoring session is unchanged.",
+    );
+  });
 function answer(response) {
   $("assistant-answer").textContent = response.answer;
   $("answer-source").textContent = (response.source || "local").toUpperCase();
   $("assistant-limitation").textContent = response.limitation || "";
+  loadAssistantStatus().catch(() => {});
   const citations = $("citations");
   citations.replaceChildren();
   for (const citation of response.citations || []) {
