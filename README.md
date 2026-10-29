@@ -32,7 +32,7 @@ Application startup never downloads model assets. A new machine needs internet f
 
 ## Gemini, optionally
 
-Copy `.env.example` to `.env` and set `GEMINI_API_KEY` on the backend. Never put a key in JavaScript. `GEMINI_MODEL` selects the model; the default is `gemini-2.5-flash`. Verify availability and your project's quota in [AI Studio](https://aistudio.google.com/).
+Copy `.env.example` to `.env` and set `GEMINI_API_KEY` on the backend. Never put a key in JavaScript. `GEMINI_MODEL` selects the model; the default is `gemini-3.8-flash`. Verify availability and your project's quota in [AI Studio](https://aistudio.google.com/).
 
 The UI supports **local status**, **general knowledge**, and **synthetic demo**. General knowledge sends only a curated question and approved local knowledge excerpts. Arbitrary user text, webcam frames, recordings, driver identifiers, measurements, and real trip history are not accepted by the cloud endpoint. Real trip reports use local templates.
 

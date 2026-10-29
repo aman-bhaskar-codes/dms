@@ -228,3 +228,30 @@ async def test_legacy_import_preserves_event_timeline_without_raw_media(tmp_path
         assert hashlib.sha256(legacy.read_bytes()).hexdigest() == before
     finally:
         await store.close()
+
+
+@pytest.mark.parametrize(
+    "model,level", [("gemini-3.8-flash", "LOW"), ("gemini-3.5-flash-lite", "MINIMAL")]
+)
+async def test_gemini3_request_uses_low_reasoning_for_bounded_latency(model, level):
+    import pytest
+
+    pytest.importorskip("google.genai")
+    from types import SimpleNamespace
+    from ai.assistant import GeminiProvider
+
+    observed = {}
+
+    class Models:
+        async def generate_content(self, **kwargs):
+            observed.update(kwargs)
+            return SimpleNamespace(
+                text='{"answer":"General rest guidance.","citations":["source"]}'
+            )
+
+    provider = GeminiProvider("test-placeholder-not-a-key", model)
+    provider.client = SimpleNamespace(aio=SimpleNamespace(models=Models()))
+    result = await provider.generate("General safety question only")
+    assert result["answer"] == "General rest guidance."
+    assert observed["config"].thinking_config.thinking_level == level
+    assert observed["config"].temperature is None

@@ -55,7 +55,14 @@ class GeminiProvider:
             contents=prompt,
             config=types.GenerateContentConfig(
                 max_output_tokens=512,
-                temperature=0.2,
+                temperature=None if self.model.startswith("gemini-3") else 0.2,
+                thinking_config=(
+                    types.ThinkingConfig(
+                        thinking_level="MINIMAL" if "flash-lite" in self.model else "LOW"
+                    )
+                    if self.model.startswith("gemini-3")
+                    else None
+                ),
                 response_mime_type="application/json",
                 response_schema={
                     "type": "object",
@@ -80,7 +87,7 @@ class AssistantService:
         store,
         knowledge,
         api_key="",
-        model="gemini-2.5-flash",
+        model="gemini-3.8-flash",
         daily_cap=20,
         interval=10,
         provider=None,

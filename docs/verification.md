@@ -43,3 +43,11 @@ Independent code review findings were fixed with regression tests: integer legac
 Idle preview disconnection has a regression test; sender and disconnect watcher are cancelled and awaited together, so closed idle sockets cannot retain the runtime during server shutdown.
 
 A real temporary Uvicorn process accepted and closed an idle preview WebSocket, then completed graceful shutdown in 0.182 seconds. This integration check used no camera, microphone, or cloud API.
+
+## Live Gemini key check — 2026-10-29
+
+The configured key authenticated for model listing. Google rejected generation with gemini-2.5-flash because it is no longer available to new users and recommended gemini-3.8-flash. Updated the default, environment template and local model setting to gemini-3.8-flash. Gemini 3 requests use documented reasoning settings (LOW for Flash, MINIMAL for Flash-Lite) without deprecated temperature overrides.
+
+No successful generated answer was verified: live Flash attempts returned deadline/time-out responses (504), and a diagnostic Flash-Lite attempt reported high demand (503). Requests used only the predefined general fatigue question and approved knowledge excerpts, with persisted application limits. No camera, biometric, transcript or trip data was sent. Further live retries were stopped. The active local monitoring session was not restarted.
+
+Post-update verification: 35 Python tests passed; Ruff, formatting and focused mypy passed. API key remains in the ignored local .env and was never included in test output or Git.
