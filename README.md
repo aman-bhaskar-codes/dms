@@ -1,201 +1,142 @@
 # DMS
 
-A local driver-monitoring **demonstration** for Apple Silicon Macs. Webcam geometry, deterministic alerts, guided calibration, session history, reports, and replay run entirely on-device. An optional Gemini assistant answers curated general questions and analyzes synthetic scenarios using approved local documentation excerpts.
+**Local driver monitoring, deterministic alerts, and inspectable session history.**
 
-![DMS dashboard](docs/design/dashboard.png)
+DMS is a webcam-based driver-monitoring demonstration built with Python, FastAPI, OpenCV, and MediaPipe. It turns visible facial geometry into time-based monitoring signals, presents them in a local dashboard, and records sessions in SQLite. Optional local voice and Gemini assistance sit alongside monitoring; urgent alerts do not depend on an LLM, a microphone, or an internet connection.
 
-> [!IMPORTANT]
-> **Supervised Demonstration Limitations:** DMS is an experimental research prototype and technology demonstrator. It is not an automotive-grade or certified safety product. Fatigue scores and alert levels are heuristic indicators based on visible facial geometry; they do not assess medical condition or legal fitness to drive. Always rest when fatigued.
+[Get started](#get-started) · [Architecture](#architecture) · [Documentation](docs/README.md) · [Verification](docs/verification.md)
 
----
+![DMS monitoring dashboard with synthetic replay](docs/design/dashboard.png)
 
-## Working Flow
+> DMS is a supervised demonstration, not a certified vehicle-safety system. Its scores are heuristics, not diagnoses, accuracy estimates, or assessments of fitness to drive. Demonstrate it while stationary. If you feel tired, stop at a safe place and rest regardless of the displayed score.
 
-```
-[Camera / Replay] ──► [Perception] ──► [Temporal Monitor] ──► [Safety Policy] ──► [Alerts / Audio]
-                          │                   │                      │
-                          ▼                   ▼                      ▼
-                    Landmarks 3D        PERCLOS, EAR,           Deterministic
-                   (solvePnP Pose)    Heuristic Score (0-100)    Transitions
-                                              │
-                                              ▼
-                                    [SQLite Local Storage] ◄──► [Web Dashboard]
-```
+## What you can do
 
-1. **Capture:** Ingests live frames from a webcam or a deterministic 30-second synthetic replay fixture.
-2. **Local Perception:** Resizes frames into a 640×480 canvas, tracks 478 3D facial landmarks using MediaPipe on CPU, calculates Eye Aspect Ratio (EAR) and Mouth Aspect Ratio (MAR), and estimates head pose (pitch/yaw/roll) using OpenCV SQPNP `solvePnP`.
-3. **Validated State:** Evaluates rolling 60-second time-weighted PERCLOS, measures consecutive eye closure, and computes a 0–100 composite fatigue score. Missing faces trigger an `unavailable` state; loss of head pose triggers `degraded` mode without fabricating zero readings.
-4. **Deterministic Alerts:** Applies fixed safety thresholds (warning at 55, critical at 72, immediate critical on eye closure $\ge 1.5\text{s}$), 5-point exit hysteresis, and 3-second recovery stabilization.
-5. **Dashboard & History:** Telemetry streams to the browser via loopback WebSockets at 5 Hz; metrics are downsampled to 1 Hz in SQLite WAL storage for reporting and export.
+| Capability           | Current behavior                                                                                                                         |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Webcam monitoring    | Process one face locally; display eye aspect ratio, mouth opening, head pose, eye-closure duration, and rolling PERCLOS.                 |
+| Reproducible replay  | Run a labeled, 30-second synthetic telemetry fixture without camera access. Replay exercises state and alert logic, not image detection. |
+| Calibration          | Collect 20 valid frontal-face seconds within 60 seconds; save an eye-aspect baseline for the default local profile.                      |
+| Deterministic alerts | Apply sustained score thresholds, prolonged-closure escalation, recovery hysteresis, controlled reminders, and acknowledgement.          |
+| Local history        | Store sampled metrics and events; inspect reports and export JSON, CSV, or printable HTML.                                               |
+| Grounded assistance  | Explain local status, retrieve approved local excerpts, or explicitly request curated Gemini questions and synthetic scenarios.          |
+| Optional voice       | Capture five seconds on request, transcribe locally with Whisper, and use macOS speech output. Typed interaction remains available.      |
 
----
+No heart-rate measurement, gaze classification, trained fatigue prediction, vehicle control, fleet backend, or continuous microphone listening is implemented. Mouth opening and head turning are observable signals; they are not proof of yawning or distraction.
 
-## Architecture
+## Get started
 
-The safety-critical monitoring pipeline is completely local and decoupled from cloud inference:
+### Requirements
 
-```mermaid
-flowchart TD
-    subgraph Local["On-Device Pipeline (Privacy Boundary)"]
-        Cam["Webcam / Replay Fixture"] --> Latest["LatestProcessor (Capacity 1)"]
-        Latest --> Pipe["Perception (MediaPipe + solvePnP)"]
-        Pipe --> Mon["Monitor (PERCLOS, EAR, MAR, Pose)"]
-        Mon --> Safety["Safety Policy (State Machine)"]
-        Safety --> Alert["Alert Engine (macOS 'say' Audio)"]
-        Mon --> Store[("SQLite Storage (WAL)")]
-        Safety --> Store
-        Mon --> WS["WebSocket Hub (5 Hz Telemetry)"]
-        WS --> UI["Web Dashboard (Local Browser)"]
-    end
+- **Python 3.12**, Git, and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+- **Apple Silicon macOS** for the locally exercised webcam, microphone, and speech path. Linux is used by CI; desktop hardware remains unverified. Native Windows startup is currently blocked by Unix file locking. See [platform support](docs/setup.md#platform-support).
+- Internet for initial dependency/model installation. Core monitoring and replay then run locally.
 
-    subgraph Cloud["Optional Cloud Path (Isolated)"]
-        UI -.->|Curated Topic / Scenario| Assist["Assistant Service"]
-        KB[("Approved Docs Excerpts")] --> Assist
-        Assist -.->|Standard Tier (store=False)| Gemini["Google Gemini API"]
-        Gemini -.->|Structured JSON + Citations| Assist
-    end
-```
-
----
-
-## Technical Stack
-
-| Component | Technology | Purpose |
-| --- | --- | --- |
-| **Vision Worker** | MediaPipe Face Landmarker | Extracts 478 facial landmarks on CPU without remote telemetry. |
-| **Geometry** | OpenCV (`solvePnP`) | Estimates 3D head pose angles from 6 canonical facial points. |
-| **Backend & Web** | FastAPI, Uvicorn, WebSockets | Serves local REST APIs and streaming telemetry over loopback (`127.0.0.1`). |
-| **Storage** | SQLite, `aiosqlite` | Bounded batched storage for session metrics (1 Hz), events, and quotas. |
-| **Speech Audio** | Native macOS `say` | Serialized audible voice alerts with critical alert preemption. |
-| **AI Assistant** | `google-genai` SDK 2 | Optional curated Q&A with strict schema and local citation checking. |
-| **Local Search** | ChromaDB, Sentence-Transformers | Optional on-device hybrid semantic retrieval (dense + BM25). |
-| **Local Voice** | `faster-whisper`, `sounddevice` | Optional push-to-talk microphone capture and on-device transcription. |
-
----
-
-## Quick Start
-
-Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). Clone the repository and install dependencies:
+Run from a source checkout; standalone wheel installation is not the supported distribution path.
 
 ```sh
 git clone https://github.com/aman-bhaskar-codes/dms.git
 cd dms
-uv sync --locked --extra gemini
-uv run dms check
-uv run dms setup-models
-uv run dms run
+uv python install 3.12
+uv sync --locked
+uv run --locked dms check
+uv run --locked dms run --replay
 ```
 
-Open **http://127.0.0.1:8000** in your browser. Choose **Start replay** to evaluate the 30-second synthetic scenario, or **Start webcam** while stationary. For automatic replay launch:
+Open **http://127.0.0.1:8000**. The replay is artificial and labeled as such. Click **Stop session** when finished; reaching the fixture's end does not finalize the session automatically. Use **Ctrl+C** in the terminal to shut down the server and release resources.
+
+The face model is included in the repository. If its readiness check reports missing or mismatched content, restore it explicitly:
 
 ```sh
-uv run dms run --replay
+uv run --locked dms setup-models
 ```
 
-Application startup never downloads models automatically; `uv run dms setup-models` verifies asset checksums locally before execution.
+For a stationary webcam demonstration, run `uv run --locked dms run`, choose **Start webcam**, grant camera permission, then open **Setup → Start calibration**. Replay does not calibrate a real face.
 
----
+[Detailed installation, permissions, and platform guidance →](docs/setup.md)
 
-## Environment Configuration
+## Optional assistance and voice
 
-Copy the example environment file to `.env`:
-
-### POSIX Shell (macOS / Linux)
-```sh
-cp .env.example .env
-```
-
-### PowerShell (Windows)
-```powershell
-Copy-Item .env.example .env
-```
-
-Set `GEMINI_API_KEY` on the backend if cloud assistance is desired. Never expose keys in browser client code. `GEMINI_MODEL` defaults to `gemini-3.5-flash-lite`. Verify model access in [Google AI Studio](https://aistudio.google.com/).
-
-> [!NOTE]
-> **Inherited Storage Directory:** SQLite databases, calibrations, and settings are saved under `data/sentinel/sentinel.db`. This path is intentionally preserved across updates to maintain your historical sessions, driver calibrations, and daily quota tracking without data migration.
-
----
-
-## Optional Knowledge and Voice Extras
-
-Core operation works fully offline. Two optional enhancements can be installed:
-
-### 1. Hybrid Knowledge Retrieval
-Installs local sentence-transformers embeddings, ChromaDB, and BM25 rank fusion:
-
-```sh
-uv sync --locked --extra gemini --extra knowledge
-uv run dms setup-models --knowledge
-```
-
-### 2. On-Device Voice Push-to-Talk
-Downloads the local quantized Whisper model for 5-second microphone transcription:
+Install the extras you want. Keep the same extras on later `uv sync` commands so optional packages are not removed.
 
 ```sh
 uv sync --locked --extra gemini --extra knowledge --extra voice
-uv run dms setup-models --knowledge --voice
+uv run --locked dms setup-models --knowledge --voice
 ```
 
-In Assistant, click **Record locally · 5 sec** to capture audio, transcribe on-device, and answer fatigue, status, or calibration queries. The microphone is never active outside this 5-second window.
-
----
-
-## Features and Capabilities
-
-- **Webcam Monitoring:** Real-time facial tracking, EAR, MAR, pitch, and yaw.
-- **Guided Calibration:** Requires 20 valid frontal-face seconds within a 60-second stationary window to establish an individualized EAR baseline.
-- **Deterministic Alerts:** Multi-tier warnings (Warning: 55, Critical: 72) and immediate critical alert on eye closure exceeding 1.5 seconds.
-- **Acknowledge & Silence:** Silences active speech alerts without masking the underlying visual safety state.
-- **Sandboxed Assistant:** Handles curated general questions and synthetic scenario interpretations; real biometric values, frames, and trip transcripts are strictly forbidden from entering cloud prompts.
-- **Reports & Exports:** Review session duration, tracking coverage, event chronologies, and SVG score trends. Export data to JSON, CSV, or printable HTML.
-
----
-
-## Platform Support
-
-| Platform | Support Tier | Details |
-| --- | --- | --- |
-| **Apple Silicon macOS** | **Tier 1 (Supported)** | Verified hardware capture, microphone input, native `say` audio, and local neural network execution. |
-| **Linux** | **Headless / CI Only** | Supported for Python runtime, unit tests, and synthetic replay. Physical webcam and desktop speech synthesis are unverified; macOS `say` is unavailable. |
-| **Windows** | **Not Supported** | Native startup is currently blocked by Unix-specific file locking (`fcntl.flock`). Running in WSL2 requires manual X11/PulseAudio bridging. |
-
----
-
-## Development and Verification
+For Gemini, copy `.env.example` to `.env` and set `GEMINI_API_KEY` **only on the backend**. Skip the copy if you already have an environment file. The configured model is selectable through `GEMINI_MODEL`; access, quotas, and billing depend on your provider project.
 
 ```sh
-# Run unit and integration tests (44 tests)
-uv run pytest -q
-
-# Code formatting and linting
-uv run ruff check .
-uv run ruff format --check .
-
-# Static type verification
-uv run mypy
-
-# Playwright browser acceptance test (requires running dms server)
-uv run dms run &
-SERVER_PID=$!
-uv run python scripts/browser_check.py
-kill $SERVER_PID
-
-# Accelerated signal-policy load benchmark
-uv run python scripts/benchmark.py
-
-# Synthetic replay memory soak
-uv run python scripts/soak.py --seconds 3600
+# macOS / Linux: run only if .env does not already exist
+cp .env.example .env
 ```
 
----
+After editing Gemini settings, choose **Assistant → Reload assistant settings**. This reloads the key, model, and application limits without restarting monitoring. It does not reload every application setting.
 
-## Documentation Links
+| Interaction                  | Processing and data boundary                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| Get local status             | Deterministic explanation of the current local snapshot.                                         |
+| Ask locally / Record locally | Local templates and retrieval; arbitrary typed questions and transcripts are not sent to Gemini. |
+| General knowledge            | Sends a predefined question plus approved excerpts when explicitly selected.                     |
+| Synthetic demo               | Sends a predefined artificial scenario plus approved excerpts; never actual trip history.        |
 
-- [Architecture and API Reference](docs/architecture.md)
-- [Setup and Configuration Guide](docs/setup.md)
-- [Demonstration Guide](docs/demo.md)
-- [Verification Record and Benchmarks](docs/verification.md)
-- [Contributing Guide](docs/contributing.md)
-- [Design Contract](DESIGN.md)
-- [Interaction Contract](UX-CONTRACT.md)
+Cloud generation has one active worker, three waiting slots, a maximum of 20 attempts per UTC day, at least ten seconds between attempts, a 15-second generation deadline, and a 512-token output cap. Usage is persisted. Missing keys, provider errors, invalid citations, or application limits normally return clearly labeled local guidance when evidence exists. A full queue returns a busy response. Citation IDs are checked; semantic correctness is not automatically proven.
+
+Core operation has no recurring service requirement. Cloud requests may incur charges if billing is enabled on your provider account; local caps do not enforce a free tier. See [assistant behavior](docs/assistant.md) and [privacy](docs/privacy.md).
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Camera[Webcam] --> Capture[Latest-frame capture]
+    Capture --> Vision[Local MediaPipe + OpenCV]
+    Vision --> Monitor[Temporal monitor]
+    Replay[Synthetic telemetry] --> Monitor
+    Monitor --> Safety[Deterministic safety policy]
+    Safety --> Audio[Visual events + local audio]
+    Monitor --> Recorder[Bounded recorder]
+    Safety --> Recorder
+    Recorder --> DB[(SQLite)]
+    Monitor --> State[Runtime state]
+    Safety --> State
+    State --> Web[FastAPI dashboard]
+    DB --> Reports[History + exports]
+    Web --> Assistant[Optional assistant]
+    Docs[Approved local excerpts] --> Assistant
+    Assistant -. Curated cloud requests only .-> Gemini[Gemini API]
+```
+
+A sequential perception worker owns MediaPipe; capacity-one buffers replace obsolete frames and results. Safety evaluation happens directly before optional event publication. WebSockets poll the latest runtime state with bounded send timeouts; slow browsers do not execute safety logic. Reports use stored samples, not generated interpretations.
+
+[Component responsibilities and lifecycle →](docs/architecture.md) · [API contracts →](docs/api.md)
+
+## Technical stack
+
+| Layer                     | Technology                                                                                        |
+| ------------------------- | ------------------------------------------------------------------------------------------------- |
+| Runtime and configuration | Python 3.12, asyncio, Pydantic Settings, uv lockfile                                              |
+| Perception                | OpenCV, MediaPipe Face Landmarker on CPU, EAR/MAR geometry, approximate head pose with `solvePnP` |
+| Local web application     | FastAPI, Uvicorn, REST, WebSockets; plain HTML/CSS/JavaScript with locally served assets          |
+| Persistence               | SQLite WAL, `aiosqlite`, batched writes and profile-scoped queries                                |
+| Knowledge                 | Built-in BM25-style lexical scoring; optional SentenceTransformers, Chroma, and rank fusion       |
+| Intelligence              | Optional official `google-genai` SDK with stateless Interactions requests                         |
+| Voice                     | Optional Faster-Whisper and sounddevice; macOS `say` for serialized speech                        |
+| Verification              | pytest, pytest-asyncio, Ruff, focused mypy, Playwright, GitHub Actions                            |
+
+## Current status and evidence
+
+The current application includes the six dashboard views, offline replay, local monitoring, reports, assistant fallbacks, and explicit model setup. Hardware checks have been exercised on one Apple Silicon Mac, not a broad device matrix.
+
+Recorded evidence includes a 15.05-second webcam run at **23.26 processed FPS** with **22.72 ms P95 application capture-to-state latency**, plus local microphone, speech, and retrieval checks. This is a short historical observation, not a guaranteed benchmark. The committed synthetic soak evidence covers **30 seconds**, not an hour. Full human calibration acceptance, device variation, and the one-hour physical-camera/memory soak remain outstanding.
+
+See the [verification record](docs/verification.md) for provenance, command results, definitions, and limits. Test instructions are in [Contributing](docs/contributing.md); CLI commands and configuration are documented in [Setup](docs/setup.md) and [Configuration](docs/configuration.md).
+
+## Documentation
+
+- [Documentation index](docs/README.md) — choose a user or contributor path.
+- [Setup](docs/setup.md) · [Configuration](docs/configuration.md) · [Troubleshooting](docs/troubleshooting.md)
+- [Guided demo](docs/demo.md) · [Assistant and retrieval](docs/assistant.md) · [Privacy and storage](docs/privacy.md)
+- [Architecture](docs/architecture.md) · [Component reference](docs/components.md) · [API reference](docs/api.md)
+- [Verification](docs/verification.md) · [Contributing](docs/contributing.md) · [Design specification](docs/design/implementation.md)
+
+Repository source and model assets have separate licensing considerations. The repository currently has no top-level license grant; consult the [model manifest](models/manifest.json) and upstream terms before redistribution.

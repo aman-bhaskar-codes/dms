@@ -1,85 +1,93 @@
-# Verification Record
+# Verification record
 
-DMS is a local driver-monitoring demonstration and research prototype, not a certified vehicle safety device.
+[Contributing commands](contributing.md) · [Component behavior](components.md) · [Known limits](troubleshooting.md)
 
----
+This page separates existing test evidence, short hardware observations, and acceptance still outstanding. DMS is a supervised demonstration, not a certified vehicle-safety device. No detection-accuracy study is included.
 
-## 1. Automated Verification Suite
+## Evidence at a glance
 
-The automated test suite verifies signal validity, time-based PERCLOS calculation, eye-closure timing, guided calibration, deterministic alert state transitions, alert preemption and acknowledgement, queue isolation, SQLite persistence, and cloud boundary privacy constraints.
+| Evidence                 | What it establishes                                                                                                                  | What it does not establish                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| Python regressions       | Deterministic monitoring, alerts, lifecycle, storage, assistant/privacy boundaries, local voice mocks, native synthetic-image smoke. | Robustness across real drivers, lighting, or long hardware runs.                    |
+| Chromium workflow script | Replay-to-report, local citations, settings validation/restoration, deletion, responsive layout and basic focus checks.              | A full accessibility audit, every browser, or comprehensive reconnect/zoom testing. |
+| `benchmark.json`         | Accelerated monitor/policy processing of 108,000 synthetic frames.                                                                   | Camera FPS, MediaPipe inference speed, or sensor-to-speaker latency.                |
+| `soak-smoke.json`        | Approximately 30 seconds of real-time synthetic ingestion and a bounded final Python allocation snapshot.                            | A completed one-hour soak or proof that native/process memory cannot grow.          |
+| Short webcam observation | One machine's local processing rate and application latency over 15 seconds.                                                         | Repeatable performance on every PC or detection accuracy.                           |
 
-### Execution Commands
+## Current documentation audit
 
-```sh
-# Unit and integration test suite
-uv run pytest -q
+Documentation was checked against the application at baseline commit `82810fb` on 2026-10-30. The documentation update does not change runtime behavior. The current regression run passed **44 tests** with normal native-library permissions; cloud calls used mocks and no camera or microphone was opened.
 
-# Code formatting and linting
-uv run ruff check .
-uv run ruff format --check .
+The documentation update also passed Chromium acceptance against an isolated local replay server with no key or device capture, plus Ruff, focused mypy, Markdown formatting, and whitespace checks. The documentation audit resolved 131 local links and checked coverage of all 24 configuration fields and 22 API/WebSocket routes. Dashboard and assistant screenshots were refreshed from that current application.
 
-# Static type verification
-uv run mypy
+This is a local result. The repository defines CI workflows, but a workflow file alone is not evidence of a successful remote run. Check GitHub's actual result for the commit being reviewed.
 
-# End-to-end browser workflow verification
-uv run python scripts/browser_check.py
-```
+## Python and browser checks
 
-### Test Coverage Highlights
+The suite covers measurement validation, time-based closure/PERCLOS, calibration, alert timing/recovery/acknowledgement, bounded queues, storage recovery/export/deletion, assistant limits and citation validation, provider request shape, serialized reload, local question retrieval, voice VAD, neutral head pose, frame letterboxing, and optional-model startup.
 
-- **Signal Validation:** Rejects non-finite/NaN values, out-of-bounds metrics, and stale timestamps.
-- **PERCLOS & Eye Closure:** Verifies rolling 60-second time-weighted accumulation and immediate alert triggers upon sustained closure ($\ge 1.5\text{s}$).
-- **Guided Calibration:** Validates baseline calculation over 20 seconds of frontal samples within a 60-second window.
-- **Alert State Machine:** Exercises Warning (55), Critical (72), 5-point exit hysteresis, 3-second recovery, and 8-second reminder cooldowns.
-- **Queue Isolation:** Confirms that video, audio, telemetry, and storage buffers remain strictly isolated with independent backpressure bounds.
-- **Persistence:** Tests SQLite WAL transactions, 1 Hz metric downsampling, cascaded session deletion, and graceful recovery of interrupted sessions.
-- **Cloud Boundary:** Enforces daily usage caps (20 requests/UTC day), strict JSON schemas, citation ID validation against local documents, and refusal of free-form driver data.
+The MediaPipe test processes a synthetic black image; it is not a face-detection accuracy test. macOS automation sandboxes can abort native MediaPipe initialization; use normal process permissions to distinguish that environment failure from a test assertion failure.
 
----
+The browser script performs real local API actions and deletes its demo session. Use a temporary store, no cloud key, and audio off as described in [Contributing](contributing.md). It checks basic keyboard focus and layout overflow at selected viewport sizes, not complete WCAG conformance or every 200%-zoom flow. Static design audit findings are supplemental, not accessibility certification.
 
-## 2. Performance and Soak Benchmarks
+## Committed benchmark evidence
 
-### Offline Signal-Policy Load Test
+### Signal-policy load test
 
-`scripts/benchmark.py` evaluates the speed and memory scaling of signal processing and safety policy evaluation without camera or MediaPipe overhead:
+[benchmark.json](benchmark.json) records:
 
-```sh
-uv run python scripts/benchmark.py --frames 108000
-```
+- 108,000 frames, representing 3600 simulated seconds.
+- 16.898 seconds wall time; approximately 6391 signal frames/second.
+- P95 measured policy-loop timing: 0.158 ms.
+- Peak traced Python allocation: 340,813 bytes; retained window: 1801 samples.
 
-- **Target:** $>1000\text{ frames/s}$, P95 policy evaluation latency $<1\text{ ms}$, bounded memory growth.
-- **Recorded Evidence (`docs/benchmark.json`):** 108,000 simulated frames processed in 16.9 seconds ($6,391\text{ frames/s}$ throughput, P95 policy latency $0.16\text{ ms}$, peak memory $340\text{ KB}$).
-
-### Synthetic Replay Soak Test
-
-`scripts/soak.py` executes an unthrottled real-time synthetic replay soak writing to temporary storage:
+The timing is an accelerated Python monitor/policy loop, not webcam throughput. It is a historical artifact without a complete machine/commit provenance record. Re-run with recorded environment details before comparing changes:
 
 ```sh
-uv run python scripts/soak.py --seconds 3600
+uv run --locked python scripts/benchmark.py --frames 108000
 ```
 
-- **Target:** Continuous 60-minute execution without memory leaks or buffer accumulation.
-- **Recorded Evidence (`docs/soak-smoke.json`):** Verified stable heap memory and queue sizes during extended execution.
+### Real-time synthetic smoke
 
----
+[soak-smoke.json](soak-smoke.json) records 30.024 seconds, 861 synthetic frames, no reported component errors, and a final Python peak allocation of 148,373 bytes. Its capture-to-state metric refers to artificial timestamps, not physical camera input. `tracemalloc` excludes much native memory and is not a process RSS monitor.
 
-## 3. Browser End-to-End Verification
+The longer command exists but has not been established by this artifact:
 
-`scripts/browser_check.py` exercises full user workflows in headless Chromium:
+```sh
+uv run --locked python scripts/soak.py --seconds 3600
+```
 
-1. **Replay to Report:** Starts synthetic replay, observes live metric updates, stops session, opens history, and verifies chart rendering.
-2. **Local Assistant:** Queries local status and tests general question retrieval with citation expander.
-3. **Settings Validation:** Submits invalid threshold order (warning $>$ critical) and verifies inline error rejection; restores valid settings.
-4. **Session Deletion:** Tests cancel behavior and keyboard focus trap inside the deletion dialog, then confirms permanent removal.
-5. **Accessibility & Responsive:** Verifies viewport scaling across $1280\times 800$, $640\times 900$, and $640\times 400$, reduced motion media emulation, and keyboard tab focus traversal.
+The script sleeps between generated samples and uses temporary storage; it is real-time synthetic ingestion, not “unthrottled” processing. Installed dense dependencies can still initialize during runtime startup; choose the environment deliberately for comparable runs.
 
----
+## Historical local hardware and provider checks
 
-## 4. Remaining Physical Acceptance Checks
+The prior implementation session on 2026-10-29 recorded these observations on an Apple Silicon Mac:
 
-The following hardware evaluations require a supervised physical testbed:
+| Check               | Observation                                                                                                                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Webcam runtime      | 350 processed frames in 15.05 seconds: 23.26 FPS; P95 application capture-to-state latency 22.72 ms; no reported component errors.                                                     |
+| Microphone          | Short default-input capture succeeded and was discarded.                                                                                                                               |
+| Local transcription | Whisper recognized an artificial speech sentence; silence with VAD yielded no transcript.                                                                                              |
+| Speech output       | A local macOS announcement completed without audio-worker error.                                                                                                                       |
+| Dense knowledge     | Local SentenceTransformers/Chroma loaded offline and returned relevant excerpts.                                                                                                       |
+| Gemini              | One real application request returned a calibration answer with a validated citation in 11.79 seconds; other requests timed out or returned provider failures and used local fallback. |
 
-1. **In-Vehicle Lighting Variation:** Direct sunlight, nighttime road glare, tunnel transitions, and backlighting.
-2. **Eyewear & Occlusions:** Testing tracking robustness with polarized sunglasses, prescription eyeglasses, hats, and partial face coverings.
-3. **Hardware Disconnection:** Physical USB camera unplug/replug during active live monitoring.
-4. **Physical In-Vehicle Soak:** Continuous 60-minute live webcam capture with thermal monitoring on Apple Silicon hardware.
+These are session observations; their complete raw hardware logs are not committed. They predate the repository consolidation and have not all been repeated in this documentation update. Treat them as limited historical evidence, not fresh acceptance of every current path.
+
+Live cloud inputs used curated general questions and approved excerpts, not private driver data. Provider access is time-dependent. A configured key or model listing does not establish successful generation or ongoing quota.
+
+### Latency definitions
+
+The application timestamps capture after `cap.read()` returns, so capture-to-state excludes sensor exposure and time already spent inside that blocking read. Alert dispatch timing measures local policy/audio-queue dispatch, not audible speaker onset. P95 values are calculated from bounded in-memory samples, not a durable timing trace.
+
+## Remaining supervised acceptance
+
+- Complete a real human calibration and confirm baseline persistence/reuse.
+- Exercise glasses, occlusion, camera position, and varied lighting while stationary.
+- Physically disconnect/reconnect the camera and verify state, cleanup, and restart behavior.
+- Verify audible warning/critical output, acknowledgement, and critical preemption in real use.
+- Run a full 60-minute physical-camera test with process RSS, native memory, queue sizes, thermal behavior, and shutdown evidence.
+- Evaluate full keyboard/screen-reader behavior, contrast, zoom, reconnect, and supported-browser coverage beyond current smoke checks.
+- Confirm optional model asset provenance/license references; manifest metadata alone is not a completed redistribution audit.
+
+Performance targets remain 15 processed FPS at default resolution, P95 application capture-to-state below 200 ms, and P95 local safety dispatch below 100 ms. They are targets, not guaranteed specifications. Report a failed target rather than silently lowering image quality or changing the measurement definition.

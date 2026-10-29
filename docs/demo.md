@@ -1,86 +1,62 @@
-# Demonstration Guide
+# Guided demonstration
 
-This guide walks through a 5-minute demonstration of the **DMS** driver-monitoring application using both the synthetic replay scenario and live camera capture.
+[Setup](setup.md) · [Assistant](assistant.md) · [Verification](verification.md)
 
----
+Use synthetic replay for a repeatable walkthrough without anyone on camera. It is timestamped telemetry, **not prerecorded video or evidence of real-person detection**. Keep its synthetic label visible in recordings.
 
-## 1. Pre-flight Setup Check
+## Prepare
 
-Open a terminal in the project directory and verify system readiness:
+Run `uv run --locked dms check`, then `uv run --locked dms run`. Open `http://127.0.0.1:8000`. Python, the face asset, and storage should be ready. Camera/microphone status can correctly say “not probed.” A key is optional.
 
-```sh
-uv run dms check
-```
-
-Ensure Python, the face landmark model, and SQLite storage report `ready`. If the model is unverified or missing, run:
+For a private demonstration that must not touch existing history, launch with a fresh data directory. On macOS/Linux:
 
 ```sh
-uv run dms setup-models
+DEMO_DATA=$(mktemp -d)
+DATA_DIR="$DEMO_DATA" GEMINI_API_KEY='' AUDIO_ENABLED=false \
+  uv run --locked dms run
 ```
 
----
+Keep that terminal open. This example intentionally disables cloud generation and speech. It still loads installed optional local models if present. When finished, use Ctrl+C; export any demo records before discarding the temporary directory.
 
-## 2. Launch the Application
+## Replay timeline
 
-Start the local web server:
+Click **Start replay**. Current fixture intervals are:
 
-```sh
-uv run dms run
-```
+| Elapsed time | Input / observation                                                                                                                    |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 0–4.9 s      | Frontal valid geometry; EAR 0.30 and MAR 0.20.                                                                                         |
+| 5–6.9 s      | Artificial eye closure, EAR 0.10. With default uncalibrated settings, closure reaches the 1.5-second critical rule around 6.5 seconds. |
+| 7–9.9 s      | Eyes reopen; recovery depends on score, accumulated PERCLOS, and hysteresis.                                                           |
+| 10–12.9 s    | Artificial mouth opening, MAR 0.80; this is not a validated yawn classification.                                                       |
+| 13–14.9 s    | Normal mouth geometry.                                                                                                                 |
+| 15–17.9 s    | Artificial head turn, yaw 35 degrees.                                                                                                  |
+| 18–19.9 s    | Frontal geometry returns.                                                                                                              |
+| 20–21.9 s    | Face loss; unavailable measurements and null score.                                                                                    |
+| 22–27.9 s    | Valid geometry returns.                                                                                                                |
+| 28–30 s      | Face loss, then replay completion/unavailable state.                                                                                   |
 
-Open **http://127.0.0.1:8000** in your web browser.
+Timing/alerts can differ with changed thresholds or a saved calibration. Use an isolated default-profile store for a reproducible baseline. Not every scripted movement must trigger a separate warning: the policy evaluates combined signals and timing.
 
----
+When the critical banner appears, explain its cause. **Acknowledge alert** silences the announcement without asserting recovery. Audible speech requires macOS, enabled audio, and a working output device. Stop the session explicitly at the end.
 
-## 3. Synthetic Replay Walkthrough
+## Inspect the record
 
-Click **Start replay** on the Live Monitoring dashboard. A 30-second pre-recorded scenario will execute:
+Open **History → Open report**. Review duration, sample-based tracking coverage, triggered alert count, score trend, and event timeline. Coverage excludes degraded/calibrating/unavailable records; a chart is not a continuous raw-video record.
 
-1. **Initial Monitoring (0–5s):** Notice the status badge switches to `Synthetic replay`. Facial metrics (EAR ~0.30, MAR ~0.20, pitch/yaw ~0°) are updated in real-time.
-2. **Prolonged Eye Closure (5–7s):** The simulated driver closes their eyes (EAR drops to 0.10). After 1.5 continuous seconds, a `CRITICAL` alert triggers:
-   - Audible voice warning: *"Stop at a safe place and take a break."*
-   - Red visual banner on the dashboard.
-3. **Alert Acknowledgement:** Click **Acknowledge alert**. Notice the audio is immediately silenced while the critical alert banner remains visible until the condition clears.
-4. **Yawning / Mouth Opening (10–14s):** MAR spikes above 0.65, demonstrating yawn detection.
-5. **Head Distraction (15–18s):** Head yaw exceeds 30°, illustrating attention loss.
-6. **Face Occlusion / Loss (20–25s):** The simulated face disappears; tracking state switches to `unavailable` rather than fabricating safe zeroes.
-7. **Session Completion:** Click **Stop session** to finalize the trip.
+Use **Export JSON**, **Export CSV**, and **Export HTML**. JSON carries the full report object; CSV contains selected metrics; HTML is a printable summary/event list. To demonstrate deletion, use only a disposable session and show Cancel before confirming. Exports/backups are independent copies and are not removed by session deletion.
 
----
+## Explain assistance
 
-## 4. Session History and Local Reports
+1. Open Assistant and use **Get local status**. After stopping, an unavailable/no-current-measurement response is expected.
+2. Ask locally: “How should calibration use lighting?” Open a citation and inspect the supporting text.
+3. Select a curated cloud topic or artificial scenario. Without a key, show the explicit local fallback. With a configured key, use one intentional bounded request and identify whether the response source is generated or local.
+4. Show model/usage status and **Reload assistant settings**. Do not open `.env` or reveal credentials while recording.
+5. Explain optional five-second local voice without implying a recording occurred. If demonstrating it, click intentionally and keep private speech out of the recording.
 
-1. Navigate to the **History** tab in the sidebar.
-2. Click **Open report** on the most recent session.
-3. Review:
-   - Trip duration and tracking coverage percentage.
-   - Interactive SVG fatigue score trend chart.
-   - Chronological event timeline showing trigger, acknowledgement, and resolution timestamps.
-4. Test data exports:
-   - Click **Export JSON** to inspect the structured payload.
-   - Click **Export CSV** to open metrics in spreadsheet software.
-   - Click **Export HTML** to view a printable summary report.
+Never replace failed provider output with an unlabeled prerecorded answer. If you shorten waits in an edited tour, disclose that editing. The assistant never receives this real session's measurements or history.
 
----
+## Optional stationary webcam and calibration
 
-## 5. Sandboxed Assistant Demonstration
+Start webcam only when ready to request camera access. Remain stationary, improve lighting, and confirm measurement validity. In Setup, start calibration and collect 20 valid frontal-face seconds within 60 seconds. Observe the actual status; do not present replay or a manually edited progress bar as a completed human calibration.
 
-1. Navigate to the **Assistant** tab.
-2. Click **Get local status** to retrieve immediate heuristic telemetry without network activity.
-3. Under **General Knowledge**, select a curated topic (e.g. *Fatigue signs & rest precautions*):
-   - If `GEMINI_API_KEY` is configured in `.env`, a concise answer with cited local evidence IDs appears.
-   - Click **Citations** to expand and review the verbatim supporting excerpt.
-   - If offline or unconfigured, DMS returns approved local knowledge directly.
-4. Under **Synthetic Scenarios**, select *Prolonged eye closure* to see the assistant interpret an artificial session without exposing real driver data.
-
----
-
-## 6. Stationary Live Camera & Calibration (Optional)
-
-1. Return to the **Live** tab and click **Start webcam** while stationary.
-2. Grant camera permissions in macOS if prompted.
-3. Navigate to **Setup** and click **Start calibration**:
-   - Maintain a natural forward gaze for 20 continuous valid frontal seconds.
-   - The system computes personalized baseline EAR and adjusts the microsleep threshold.
-   - A success notification confirms the calibrated baseline is stored.
-4. Click **Stop session** when finished.
+Stop the session and close the server with Ctrl+C when the demonstration ends. A tutorial can show calibration controls without completing physical calibration, provided the narration says so.
