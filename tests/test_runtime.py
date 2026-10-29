@@ -165,3 +165,10 @@ async def test_second_runtime_cannot_interrupt_active_session(tmp_path):
     finally:
         await first.close()
         await second.close()
+
+
+def test_audio_check_does_not_claim_success_when_audio_disabled(tmp_path):
+    with TestClient(create_app(Settings(data_dir=tmp_path, audio_enabled=False))) as client:
+        response = client.post("/api/v1/audio/test")
+        assert response.status_code == 409
+        assert "disabled" in response.json()["detail"].lower()

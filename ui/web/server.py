@@ -196,6 +196,11 @@ def create_app(config=None):
 
     @app.post("/api/v1/audio/test")
     async def audio_test():
+        runtime.audio.enabled = runtime.config.audio_enabled
+        if not runtime.audio.enabled:
+            raise HTTPException(
+                409, "Audio is disabled. Enable local audio in Settings before testing."
+            )
         runtime.audio.speak("Sentinel audio test. Local alerts are ready.")
         return {"queued": True}
 
