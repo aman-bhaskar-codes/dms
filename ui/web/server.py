@@ -250,8 +250,9 @@ def create_app(config=None):
             await ws.close(code=1008)
             return
         await ws.accept()
-        last = -1
-        try:
+
+        async def send_updates():
+            last = -1
             while True:
                 if preview:
                     if runtime.preview and last != runtime.preview_version:
@@ -264,9 +265,25 @@ def create_app(config=None):
                         payload = {"topic": "FATIGUE_SCORE", "payload": payload["snapshot"]}
                     await asyncio.wait_for(ws.send_json(payload), timeout=1)
                     await asyncio.sleep(0.2)
+
+        async def watch_disconnect():
+            # Idle preview may never send. Observe ASGI disconnects independently.
+            while True:
+                message = await ws.receive()
+                if message["type"] == "websocket.disconnect":
+                    return
+
+        tasks = [asyncio.create_task(send_updates()), asyncio.create_task(watch_disconnect())]
+        try:
+            done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                task.result()
         except (WebSocketDisconnect, RuntimeError, asyncio.TimeoutError):
             pass
         finally:
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
             try:
                 await ws.close()
             except RuntimeError:

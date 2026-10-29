@@ -27,7 +27,7 @@ No API key was supplied during implementation. No live cloud inference or camera
 
 | Check | Result |
 | --- | --- |
-| Full Python suite, native model smoke included | 32 passed |
+| Full Python suite, native model smoke included | 33 passed |
 | Ruff lint / formatting | Passed |
 | Focused mypy | Passed |
 | JavaScript syntax / Prettier | Passed |
@@ -39,3 +39,7 @@ No API key was supplied during implementation. No live cloud inference or camera
 The signal-policy benchmark is not a vision FPS measurement, and the 30-second smoke is not the required one-hour physical-camera soak. Do not promote this implementation candidate to a real-driver release using these results alone.
 
 Independent code review findings were fixed with regression tests: integer legacy session IDs, per-attempt Gemini retry accounting, and inherited mouth-opening geometry. A later regression check also made nonzero audio subprocess exits visible in health status.
+
+Idle preview disconnection has a regression test; sender and disconnect watcher are cancelled and awaited together, so closed idle sockets cannot retain the runtime during server shutdown.
+
+A real temporary Uvicorn process accepted and closed an idle preview WebSocket, then completed graceful shutdown in 0.182 seconds. This integration check used no camera, microphone, or cloud API.

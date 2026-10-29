@@ -51,7 +51,14 @@ def cli():
 
         app = create_app(config)
         app.state.autostart = "replay" if getattr(args, "replay", False) else None
-        uvicorn.run(app, host=config.web_host, port=config.web_port, log_level="warning")
+        uvicorn.run(
+            app,
+            host=config.web_host,
+            port=config.web_port,
+            log_level="warning",
+            timeout_graceful_shutdown=5,
+            ws_max_size=8192,
+        )
 
 
 if __name__ == "__main__":

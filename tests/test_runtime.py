@@ -172,3 +172,27 @@ def test_audio_check_does_not_claim_success_when_audio_disabled(tmp_path):
         response = client.post("/api/v1/audio/test")
         assert response.status_code == 409
         assert "disabled" in response.json()["detail"].lower()
+
+
+async def test_idle_preview_exits_when_browser_disconnects(tmp_path):
+    app = create_app(Settings(data_dir=tmp_path, audio_enabled=False))
+    endpoint = next(
+        route.endpoint for route in app.routes if getattr(route, "path", None) == "/ws/v1/preview"
+    )
+
+    class ClosedBrowser:
+        headers = {"origin": "http://127.0.0.1:8000"}
+        closed = False
+
+        async def accept(self):
+            pass
+
+        async def receive(self):
+            return {"type": "websocket.disconnect", "code": 1000}
+
+        async def close(self, code=1000):
+            self.closed = True
+
+    browser = ClosedBrowser()
+    await asyncio.wait_for(endpoint(browser), 0.2)
+    assert browser.closed
