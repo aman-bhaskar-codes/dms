@@ -1,128 +1,121 @@
-# Setup and Configuration Guide
+# Setup
+
+[Documentation index](README.md) · [Configuration](configuration.md) · [Troubleshooting](troubleshooting.md)
+
+This guide installs the current source checkout. No hosted backend, cloud database, Docker setup, or frontend build step is required. Keep the repository alongside its assets: runtime paths assume the source tree contains `models/`, `fixtures/`, and `docs/knowledge/`.
+
+## Platform support
+
+| Environment         | Evidence and limits                                                                                                                                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Apple Silicon macOS | Main development environment. Short webcam, local microphone, Whisper, speech output, and retrieval checks have run on one Mac. Hardware accuracy and long-duration behavior remain unvalidated.                                      |
+| Linux               | GitHub Actions defines Python and Chromium jobs on Ubuntu. Core replay is intended to run without a webcam. Camera/microphone hardware has not been exercised here. `say` speech is unavailable; use visual alerts and disable audio. |
+| Native Windows      | Startup uses `fcntl.flock`, so the current application cannot start natively. Installing Python or copying `.env` does not resolve this.                                                                                              |
+| WSL / Intel macOS   | Not validated deployment targets. WSL hardware forwarding and audio are outside this guide; no working parity is claimed.                                                                                                             |
+
+Use a local desktop browser. The server deliberately binds to loopback; access from another computer or phone is not supported.
 
 ## Prerequisites
 
-- **Operating System:** macOS on Apple Silicon (M1/M2/M3/M4) recommended for hardware camera, microphone, and speech synthesis.
-- **Python:** Version 3.12.
-- **Package Manager:** [uv](https://docs.astral.sh/uv/) (version 0.4+).
-- **Hardware (Optional for live demo):** Built-in FaceTime HD camera or external USB webcam; built-in microphone for local voice push-to-talk.
+1. Install Git and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+2. Use Python 3.12; other Python minor releases are excluded by project metadata.
+3. Allow network access during dependency installation and explicit model downloads.
+4. For webcam use, provide a camera the operating system can open. A microphone is needed only for optional push-to-talk.
 
----
+No universal RAM, disk-space, or frame-rate minimum has been established. Knowledge and voice extras add substantial packages and downloaded assets; start with core replay on an unfamiliar machine.
 
-## Clean Installation
+### Linux system libraries
 
-From a clean shell, clone the repository and synchronize the locked dependencies:
+The repository's Ubuntu workflow installs these libraries before Python dependencies:
+
+```sh
+sudo apt-get update
+sudo apt-get install -y libgl1 libgles2 libegl1 libglib2.0-0 libportaudio2
+```
+
+These package names are for Ubuntu/Debian, not every Linux distribution. Disable speech in `.env` with `AUDIO_ENABLED=false`. Visual alert behavior remains available.
+
+## Install and run core replay
 
 ```sh
 git clone https://github.com/aman-bhaskar-codes/dms.git
 cd dms
-uv sync --locked --extra gemini
+uv python install 3.12
+uv sync --locked
+uv run --locked dms --help
+uv run --locked dms check
+uv run --locked dms run --replay
 ```
 
-Verify your local installation:
+Open **http://127.0.0.1:8000**. Confirm the interface says **Synthetic replay**. Replay feeds measurements into the same monitor and alert policy as live capture, without running image inference.
+
+After about 30 seconds, the fixture ends and monitoring becomes unavailable. Click **Stop session** to finalize the record. Stop the server with **Ctrl+C**. Let shutdown finish so the recorder flushes, the database closes, and the camera/port are released.
+
+`dms check` creates/checks writable storage, verifies the face asset, and reports optional readiness. It does not authenticate Gemini, open the microphone, or prove that speech is audible. Camera access is checked only with `dms check --probe-camera` or a live session.
+
+## Restore the face model
+
+The face asset is tracked in the checkout. If missing or different from the manifest checksum:
 
 ```sh
-uv run dms check
+uv run --locked dms setup-models
 ```
 
-Restore and verify the bundled MediaPipe Face Landmarker model asset:
+This command downloads only when the face asset needs restoration. Startup never silently downloads it. Model provenance and expected size/checksum are in [the manifest](../models/manifest.json).
 
-```sh
-uv run dms setup-models
-```
+## Configure your environment
 
-Start the local server:
+No API key is required for replay or webcam monitoring. To customize defaults, create `.env` from the template **only if you do not already have one**:
 
-```sh
-uv run dms run
-```
-
-Open **http://127.0.0.1:8000** in your browser. Choose **Start replay** for an automated synthetic scenario or **Start webcam** to monitor live video while stationary.
-
----
-
-## Optional Components
-
-DMS operates completely offline by default. Two optional feature tiers can be installed on demand:
-
-### 1. Hybrid Knowledge Retrieval
-Installs local sentence-transformers embeddings (`all-MiniLM-L6-v2`), ChromaDB vector store, and BM25 rank fusion for searching safety documentation:
-
-```sh
-uv sync --locked --extra gemini --extra knowledge
-uv run dms setup-models --knowledge
-```
-
-### 2. Local Voice Push-to-Talk
-Installs `faster-whisper` and downloads the quantized local Whisper model (`whisper-base-en` with VAD filter) for 5-second on-device voice queries:
-
-```sh
-uv sync --locked --extra gemini --extra knowledge --extra voice
-uv run dms setup-models --knowledge --voice
-```
-
----
-
-## Environment Configuration
-
-Copy the example environment configuration to `.env`:
-
-### POSIX Shell (macOS / Linux)
 ```sh
 cp .env.example .env
 ```
 
-### PowerShell (Windows / Cross-platform)
+Equivalent PowerShell file operation, for editing a checkout rather than claiming native Windows runtime support:
+
 ```powershell
 Copy-Item .env.example .env
 ```
 
-### Configuration Variables
+Edit `.env` with a text editor. Keep `GEMINI_API_KEY` private and backend-only. Do not paste it into the browser, a screenshot, logs, a commit, or a support issue. Existing Settings-page preferences override some `.env` values after restart; see [configuration precedence](configuration.md#precedence-and-reload).
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `GEMINI_API_KEY` | `""` (empty) | Google Gemini API key for curated assistant queries. Must never be placed in client-side code. |
-| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Supported model tier in AI Studio. |
-| `GEMINI_DAILY_CAP` | `20` | Maximum daily requests enforced by local SQLite persistence (max 20). |
-| `GEMINI_INTERVAL_S` | `10` | Minimum seconds between cloud requests. |
-| `CAMERA_INDEX` | `0` | Default video capture device index. |
-| `CAMERA_WIDTH` | `640` | Capture resolution width (resized/letterboxed without distortion). |
-| `CAMERA_HEIGHT` | `480` | Capture resolution height. |
-| `CAMERA_FPS` | `30` | Target frame capture rate. |
-| `AUDIO_ENABLED` | `true` | Enable macOS `say` speech output for alert warnings. |
-| `FATIGUE_WARN_THRESHOLD` | `55` | Score threshold for warning fatigue level (1–95). |
-| `FATIGUE_CRIT_THRESHOLD` | `72` | Score threshold for critical fatigue level (must be $\ge \text{warn} + 5$). |
-| `EYE_CLOSURE_S` | `1.5` | Consecutive seconds of closed eyes before triggering immediate critical alert. |
-| `RETENTION_DAYS` | `30` | Auto-cleanup threshold for completed historical sessions. |
+## Add optional features
 
-### Inherited Storage Location
-Local SQLite data, user preferences, and calibration are stored in `data/sentinel/sentinel.db`. This path is intentionally preserved across product updates to maintain historical sessions, daily quota reservations, and driver calibrations without interruption.
+| Installation          | Commands                                                                                 |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| Gemini only           | `uv sync --locked --extra gemini`                                                        |
+| Local dense knowledge | `uv sync --locked --extra knowledge` then `uv run --locked dms setup-models --knowledge` |
+| Local voice           | `uv sync --locked --extra voice` then `uv run --locked dms setup-models --voice`         |
+| All extras            | Commands below                                                                           |
 
----
+```sh
+uv sync --locked --extra gemini --extra knowledge --extra voice
+uv run --locked dms setup-models --knowledge --voice
+```
 
-## macOS Permissions
+Use the same extras on later `uv sync` calls. An exact sync can remove extras omitted from that command; see [uv's sync behavior](https://docs.astral.sh/uv/concepts/projects/sync/). Development tools are included by the project's default development group.
 
-When launching `uv run dms run`:
-1. **Camera:** When clicking **Start webcam**, macOS will prompt to allow camera access for the launching terminal application (e.g. Terminal, iTerm2, or IDE). If denied, navigate to:
-   **System Settings → Privacy & Security → Camera** and toggle access on.
-2. **Microphone:** When clicking **Record locally** in Assistant, grant microphone permission in:
-   **System Settings → Privacy & Security → Microphone**.
+Optional setup contacts Hugging Face, resolves a repository revision, and records installed-file checksums in `models/installed-models.json`. It may take time and disk space. Dense retrieval loads from disk in the background at startup; lexical retrieval works while it loads. Whisper loads on the first voice request, so the first recording can start later than the button click. Startup does not download either model.
 
----
+Install the Gemini extra before using a configured key. Select a model your provider project can access; the repository's default is not a guarantee of availability. [Assistant behavior](assistant.md) describes limits and fallbacks.
 
-## Platform Support and Limitations
+## First stationary webcam session
 
-| Platform | Documented Status | Notes |
-| --- | --- | --- |
-| **Apple Silicon macOS** | **Tier 1 (Supported)** | Full local hardware support: webcam capture, microphone input, native `say` speech synthesis, and local neural network inference. |
-| **Linux** | **Headless / CI Only** | Supported for Python runtime, unit tests, and synthetic replays. Physical webcam, desktop audio, and speech synthesis are unverified; macOS `say` is unavailable. |
-| **Windows** | **Not Supported** | Native startup is currently blocked by Unix-specific file locking (`fcntl.flock`). Running in WSL2 or Linux containers requires external X11/PulseAudio passthrough. |
+1. Run `uv run --locked dms run` and open the local dashboard.
+2. Choose **Start webcam**. Grant camera permission to the launching terminal or app.
+3. Keep your face visible, frontal, and evenly lit. Unavailable readings are not a healthy-driver result.
+4. Open **Setup → Start calibration**. Accumulate 20 valid frontal-face seconds before the 60-second deadline. Poor frames pause valid accumulation; this is not necessarily 20 consecutive wall-clock seconds.
+5. Review the completion status. The baseline is stored locally for the default profile. It changes the EAR threshold, not the application's demonstrated accuracy.
+6. Use **Stop session**, then inspect History and a report.
 
----
+On macOS, camera and microphone access are controlled under **System Settings → Privacy & Security**. Check the permission for the terminal/IDE that actually launches Python. Camera use is explicit; microphone use begins only through **Record locally · 5 sec**. Close other camera applications if the device is busy.
 
-## Troubleshooting
+## Audio and voice
 
-- **Camera fails to open or produces black frames:** Ensure no other application (FaceTime, Zoom, Photo Booth) is using the camera. Test another index by updating `camera_index: 1` in Settings or `.env`.
-- **MediaPipe crashes or segmentation fault:** Ensure `uv run dms setup-models` has verified the asset checksum. On macOS, run outside restricted sandbox environments.
-- **Speech synthesis produces no sound:** Verify system volume and confirm `audio_enabled: true` in Settings. Click **Test audio** under Settings to dispatch a test utterance.
-- **Gemini returns quota or availability errors:** The application automatically falls back to local approved safety guidance excerpts. Cloud calls are strictly optional and rate-limited.
+Enable local audio in Settings while no session is active, save, and use Setup's audio test. The test queues speech; check that you hear it and that health reports no audio error. A successful queue response alone does not prove output.
+
+Optional voice captures five seconds at 16 kHz from the default input, transcribes English locally on CPU, and returns the transcript and answer to the local browser. No continuous listener is implemented. Typed local questions remain available if permissions or dependencies fail.
+
+## Updating an existing checkout
+
+Stop the server before updating code or dependencies. Back up local data first; do not overwrite `.env` or delete the inherited data directory. Synchronize the desired extras with `uv sync --locked`, run the readiness check, then start replay before another webcam demonstration. See [backup and restore](privacy.md#backup-and-restore).

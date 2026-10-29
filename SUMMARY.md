@@ -1,0 +1,16 @@
+# Table of contents
+
+- [DMS](README.md)
+- [Documentation](docs/README.md)
+- [Getting started](docs/setup.md)
+- [Configuration](docs/configuration.md)
+- [Guided demonstration](docs/demo.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Architecture](docs/architecture.md)
+- [Component reference](docs/components.md)
+- [Local API](docs/api.md)
+- [Assistant and retrieval](docs/assistant.md)
+- [Privacy and storage](docs/privacy.md)
+- [Verification](docs/verification.md)
+- [Contributing](docs/contributing.md)
+- [Design specification](docs/design/implementation.md)
