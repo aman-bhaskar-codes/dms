@@ -1,59 +1,85 @@
-"""
-V5 Safety Agent — Deterministic rules mapping fatigue scores to alerts.
-"""
-import logging
+"""Deterministic transition policy; no LLM or optional dependency participates."""
+
 import time
-from core.bus import EventBus, EventTopic
-from memory.working_memory import WorkingMemory
+from typing import Literal
+from core.config import Settings
+from core.contracts import AlertEvent, MonitoringSnapshot
 
-logger = logging.getLogger("dms.agents.safety")
 
+class SafetyPolicy:
+    def __init__(self, config: Settings | None = None) -> None:
+        self.config = config or Settings()
+        self.active: Literal["warning", "critical"] | None = None
+        self.pending: Literal["warning", "critical"] | None = None
+        self.pending_since = 0.0
+        self.recovery_since: float | None = None
+        self.last_alert = -float("inf")
+        self.acknowledged = False
 
-class SafetyAgent:
-    """
-    Evaluates fatigue states and fires alerts. 
-    Maintains state to prevent alert spam.
-    """
-    def __init__(self, bus: EventBus, memory: WorkingMemory):
-        self._bus = bus
-        self._memory = memory
-        self._last_alert_time = 0.0
-        self._alert_cooldown = 5.0  # seconds
+    def acknowledge(self):
+        self.acknowledged = True
 
-    async def evaluate(self, payload: dict):
-        score = payload.get("score", 0.0)
-        level = payload.get("level", "safe")
-        
-        if level in ["warning", "critical"]:
-            await self._trigger_alert(level, score)
-
-    async def handle_critical(self, payload: dict):
-        score = payload.get("score", 100.0)
-        await self._trigger_alert("critical", score, bypass_cooldown=True)
-
-    async def _trigger_alert(self, level: str, score: float, bypass_cooldown: bool = False):
-        now = time.time()
-        if not bypass_cooldown and (now - self._last_alert_time) < self._alert_cooldown:
-            return
-
-        self._last_alert_time = now
-        logger.warning(f"[SafetyAgent] Firing {level.upper()} alert! Score: {score}")
-
-        await self._bus.publish(
-            EventTopic.AGENT_TASK,
-            {"task": f"[SafetyAgent] Evaluating biometrics: score={score:.1f}, level={level.upper()}. Firing alert!"},
-            source="safety_agent"
+    def evaluate(self, snapshot: MonitoringSnapshot, now: float | None = None) -> AlertEvent | None:
+        now = time.monotonic() if now is None else now
+        if snapshot.state not in ("monitoring", "degraded") or snapshot.score is None:
+            self.pending = None
+            self.recovery_since = None
+            return None
+        immediate = "prolonged_eye_closure" in snapshot.reasons
+        target: Literal["warning", "critical"] | None = (
+            "critical"
+            if immediate or snapshot.score >= self.config.fatigue_crit_threshold
+            else "warning"
+            if snapshot.score >= self.config.fatigue_warn_threshold
+            else None
         )
-
-        await self._bus.publish(
-            EventTopic.UI_OVERLAY_UPDATE,
-            {"alert": level, "message": f"{level.upper()} FATIGUE DETECTED"},
-            source="safety_agent"
-        )
-        
-        # Audio alert based on severity
-        if level == "critical":
-            await self._bus.publish(EventTopic.VOICE_RESPONSE, {"text": "Critical fatigue. Pull over immediately."}, source="safety")
-        elif level == "warning":
-            await self._bus.publish(EventTopic.VOICE_RESPONSE, {"text": "You seem tired. Please take a break."}, source="safety")
-
+        if self.active:
+            threshold = (
+                self.config.fatigue_crit_threshold
+                if self.active == "critical"
+                else self.config.fatigue_warn_threshold
+            ) - 5
+            if snapshot.score < threshold and not immediate:
+                if self.recovery_since is None:
+                    self.recovery_since = now
+                if now - self.recovery_since >= 3:
+                    old = self.active
+                    self.active = self.pending = None
+                    self.acknowledged = False
+                    return AlertEvent(
+                        session_id=snapshot.session_id,
+                        severity=old,
+                        cause="recovered",
+                        transition="resolved",
+                    )
+            else:
+                self.recovery_since = None
+        if target and (self.active is None or target == "critical" and self.active == "warning"):
+            if self.pending != target:
+                self.pending, self.pending_since = target, now
+            if immediate or now - self.pending_since >= 1:
+                self.active, self.pending = target, None
+                self.acknowledged = False
+                self.last_alert = now
+                return AlertEvent(
+                    session_id=snapshot.session_id,
+                    severity=target,
+                    cause="prolonged_eye_closure"
+                    if immediate
+                    else snapshot.reasons[0]
+                    if snapshot.reasons
+                    else "sustained_score",
+                    transition="triggered",
+                )
+        elif target is not None and target == self.active and not self.acknowledged:
+            if now - self.last_alert >= self.config.alert_cooldown_s:
+                self.last_alert = now
+                return AlertEvent(
+                    session_id=snapshot.session_id,
+                    severity=target,
+                    cause="sustained_condition",
+                    transition="reminder",
+                )
+        else:
+            self.pending = None
+        return None

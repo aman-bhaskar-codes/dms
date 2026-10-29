@@ -1,0 +1,64 @@
+name: DMS checks
+
+on:
+  push:
+    branches: [main, "feat/*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libgles2 libegl1 libglib2.0-0 libportaudio2
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+      - name: Sync dependencies
+        run: uv sync --locked --extra gemini
+      - name: Code formatting and linting
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Type checking
+        run: uv run mypy
+      - name: Python test suite
+        run: uv run pytest -q
+      - name: Clean-install CLI smoke check
+        run: |
+          uv run dms --help
+          uv run dms check
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libgles2 libegl1 libglib2.0-0 libportaudio2
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+      - name: Sync dependencies
+        run: uv sync --locked --extra gemini
+      - name: Install Playwright Chromium
+        run: uv run playwright install --with-deps chromium
+      - name: Dashboard workflow acceptance
+        run: |
+          TMP_DATA=$(mktemp -d)
+          DATA_DIR="$TMP_DATA" uv run dms run &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            if curl -s http://127.0.0.1:8000/api/v1/health > /dev/null; then
+              break
+            fi
+            sleep 0.5
+          done
+          uv run python scripts/browser_check.py http://127.0.0.1:8000
+          kill $SERVER_PID || true
+          rm -rf "$TMP_DATA"

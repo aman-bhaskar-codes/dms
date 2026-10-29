@@ -1,69 +1,49 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "dms-v4"
-version = "0.4.0"
-description = "Driver Monitoring System V4 — Claude API + FastAPI Dashboard"
-requires-python = ">=3.11"
-
+name = "dms"
+version = "0.1.0"
+description = "Local driver monitoring demonstration with optional Gemini assistance"
+requires-python = ">=3.12,<3.13"
 dependencies = [
-    # Core vision
-    "opencv-python>=4.9.0",
-    "mediapipe>=0.10.9",
-    "numpy>=1.26.0",
-    # Object detection (optional but included)
-    "ultralytics>=8.1.0",
-    # Ollama AI
-    "ollama>=0.2.0",
-    # FastAPI dashboard
-    "fastapi>=0.111.0",
-    "uvicorn[standard]>=0.30.0",
-    "websockets>=12.0",
-    # Telegram alerts
-    "python-telegram-bot>=21.0",
-    # Voice
-    "pyttsx3>=2.90",
-    "openai-whisper>=20231117",
-    # Data
-    "pydantic>=2.7.0",
-    "pydantic-settings>=2.3.0",
-    "aiosqlite>=0.20.0",
-    "sqlalchemy>=2.0.0",
-    "chromadb>=0.4.24",
-    # RAG & Agents
-    "langchain>=0.1.0",
-    "langchain-community>=0.0.10",
-    "langchain-core>=0.1.0",
-    "langchain-ollama>=0.1.0",
-    "langgraph>=0.0.26",
-    "rank-bm25>=0.2.2",
-    "sentence-transformers>=2.7.0",
-    # Voice
-    "faster-whisper>=1.0.1",
-    "pyaudio>=0.2.14",
-    "torch>=2.0.0",
-    "torchaudio>=2.0.0",
-    "httpx>=0.27.0",
-    # Utils
-    "scipy>=1.13.0",
-    "pillow>=10.3.0",
-    "rich>=13.7.0",
-    "python-dotenv>=1.0.0",
-    "onnxruntime>=1.26.0",
+  "fastapi>=0.115,<1", "uvicorn[standard]>=0.30,<1", "pydantic>=2.9,<3",
+  "pydantic-settings>=2.5,<3", "aiosqlite>=0.20,<1", "httpx>=0.27,<1",
+  "numpy>=1.26,<3", "opencv-contrib-python>=4.10,<5", "mediapipe>=0.10.20,<0.11",
 ]
 
-[tool.uv]
-dev-dependencies = [
-    "pytest>=8.2.0",
-    "pytest-asyncio>=0.23.0",
-    "ruff>=0.4.0",
-    "mypy>=1.10.0",
-]
+[project.optional-dependencies]
+gemini = ["google-genai>=2,<3"]
+voice = ["faster-whisper>=1.1,<2", "sounddevice>=0.5,<1"]
+knowledge = ["sentence-transformers>=3,<6", "chromadb>=1,<2", "rank-bm25>=0.2,<1"]
+
+[project.scripts]
+dms = "main:cli"
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "pytest-asyncio>=0.24,<2", "ruff>=0.9,<1", "mypy>=1.13,<2", "playwright>=1.49,<2"]
+
+[tool.setuptools]
+py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+include = ["ai*", "core*", "perception*", "agents*", "alerts*", "memory*", "rag*", "voice*", "ui*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+"ui.web" = ["static/*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+include = ["core/*.py", "agents/safety_agent.py", "alerts/alert_engine.py", "perception/pipeline.py", "memory/store.py", "rag/knowledge.py", "ai/assistant.py", "voice/local.py", "ui/web/server.py", "main.py", "tests/*.py", "scripts/*.py"]
 
 [tool.mypy]
-python_version = "3.11"
+plugins = ["pydantic.mypy"]
+python_version = "3.12"
 ignore_missing_imports = true
-
-[tool.setuptools]
-packages = ["detectors", "calibration", "memory", "ai", "alerts", "dashboard"]
+files = ["core/contracts.py", "core/config.py", "agents/safety_agent.py"]

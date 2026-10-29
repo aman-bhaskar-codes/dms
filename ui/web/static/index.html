@@ -1,120 +1,501 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DMS V5 SENTINEL | Telemetry Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <!-- Chart.js for graphs -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
-    <div id="overlay-alert" class="hidden">
-        <h1 id="overlay-msg">CRITICAL FATIGUE DETECTED</h1>
-    </div>
-
-    <div class="dashboard">
-        <header>
-            <div class="logo">SENTINEL <span>V5</span></div>
-            <div class="status-indicator">
-                <span class="dot pulse"></span>
-                <span>SYSTEM ONLINE</span>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>DMS · Local driver monitoring</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script defer src="/static/app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <aside class="sidebar">
+      <a class="brand" href="#live" aria-label="DMS home"
+        ><svg width="34" height="38" viewBox="0 0 34 38" aria-hidden="true">
+          <path
+            d="M17 2 32 8v11c0 8-8 14-15 17C10 33 2 27 2 19V8Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          />
+          <path
+            d="M9 19h5l3-7 3 14 3-7h4"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          /></svg
+        ><span>DMS<small>DRIVER MONITORING</small></span></a
+      >
+      <p class="nav-label">WORKSPACE</p>
+      <nav aria-label="Main navigation">
+        <button disabled data-view="live" aria-current="page">
+          <span aria-hidden="true">◉</span>Live
+        </button>
+        <button disabled data-view="setup">
+          <span aria-hidden="true">◎</span>Setup
+        </button>
+        <button disabled data-view="assistant">
+          <span aria-hidden="true">◇</span>Assistant
+        </button>
+        <button disabled data-view="history">
+          <span aria-hidden="true">≡</span>History
+        </button>
+        <button disabled data-view="settings">
+          <span aria-hidden="true">⚙</span>Settings
+        </button>
+      </nav>
+      <div class="sidebar-bottom">
+        <span class="local-dot"></span> Local first
+        <p>Camera and trip data stay<br />on this computer.</p>
+        <span class="version">DMS DEMO</span>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <span
+          >Workspace <span class="slash">/</span>
+          <strong id="breadcrumb">Live monitoring</strong></span
+        ><span id="connection" class="connection">Connecting…</span>
+      </header>
+      <main id="main">
+        <div id="notice" role="status" class="notice" hidden></div>
+        <section id="view-live" class="view">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">A LITTLE MORE AWARENESS</p>
+              <h1 tabindex="-1">Your drive, in view.</h1>
+              <p class="subtitle">
+                Local monitoring. Clear signals. Your attention on what matters.
+              </p>
             </div>
-        </header>
-
-        <main class="grid-container">
-            <!-- Live Camera HUD & Mesh Overlay -->
-            <section class="panel glass camera-panel">
-                <h2>DRIVER FACE TRACKING & CAMERA HUD</h2>
-                <div class="camera-container">
-                    <img id="camera-feed" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Camera Feed">
-                    <div class="camera-overlay-badge">
-                        <span class="dot pulse"></span>
-                        <span>LIVE STREAM</span>
+            <span id="mode-badge" class="badge">No active session</span>
+          </div>
+          <div id="alert-banner" role="alert" class="alert-banner" hidden>
+            <strong id="alert-title"></strong><span id="alert-message"></span
+            ><button disabled id="ack-alert" class="secondary">
+              Acknowledge alert
+            </button>
+          </div>
+          <div class="live-grid">
+            <div>
+              <article class="camera-panel panel">
+                <div class="panel-head">
+                  <h2>Driver view</h2>
+                  <span id="state" class="state">Idle</span>
+                </div>
+                <div class="camera-surface">
+                  <img
+                    id="preview"
+                    alt="Local webcam with face landmarks"
+                    hidden
+                  />
+                  <div id="camera-empty">
+                    <div class="viewfinder" aria-hidden="true">
+                      <span></span><span></span><span></span><span></span
+                      ><svg viewBox="0 0 100 100" width="84" height="84">
+                        <circle cx="50" cy="35" r="15" />
+                        <path d="M22 83c0-31 56-31 56 0" />
+                      </svg>
                     </div>
+                    <h3 id="camera-title">A clear view starts here.</h3>
+                    <p id="camera-description">
+                      Start your webcam, or explore a synthetic replay.
+                    </p>
+                    <span class="camera-tag" id="camera-tag"
+                      >LOCAL VIDEO · NEVER UPLOADED</span
+                    >
+                  </div>
                 </div>
-            </section>
-
-            <!-- Sentinel AI Agent Interaction -->
-            <section class="panel glass chat-panel">
-                <h2>SENTINEL VOICE AGENT INTERACTION</h2>
-                <div class="chat-container">
-                    <div class="chat-messages" id="chat-messages">
-                        <div class="chat-bubble sentinel">Hello! I am SENTINEL. How can I help you stay safe today?</div>
-                    </div>
-                    <form class="chat-input-area" id="chat-form">
-                        <input type="text" class="chat-input" id="chat-input" placeholder="Type a message or safety question..." autocomplete="off">
-                        <button type="submit" class="chat-send-btn">Send</button>
-                    </form>
+                <div class="camera-foot">
+                  <span
+                    ><i class="local-dot"></i
+                    ><span id="tracking-label"
+                      >Waiting for a session</span
+                    ></span
+                  ><span id="frame-counter">— frames</span>
                 </div>
-            </section>
-
-            <!-- Main Score Dial -->
-            <section class="panel glass score-panel">
-                <h2>OVERALL FATIGUE</h2>
-                <div class="dial-container">
-                    <div class="dial">
-                        <span id="score-val">0.0</span>
-                        <span class="unit">/ 100</span>
-                    </div>
+              </article>
+              <div class="readings">
+                <article class="reading">
+                  <span>Eye aspect ratio</span><strong id="metric-ear">—</strong
+                  ><small>Measured eye geometry</small>
+                </article>
+                <article class="reading">
+                  <span>Eye closure</span><strong id="metric-closure">—</strong
+                  ><small>Continuous valid tracking</small>
+                </article>
+                <article class="reading">
+                  <span>PERCLOS</span><strong id="metric-perclos">—</strong
+                  ><small>Rolling eye-closure ratio</small>
+                </article>
+              </div>
+              <article class="panel trend-panel">
+                <div class="panel-head">
+                  <h2>Session trend</h2>
+                  <span class="muted">Heuristic score / 0–100</span>
                 </div>
-                <div class="level-indicator" id="level-badge">SAFE</div>
-            </section>
-
-            <!-- Head Pose & rPPG -->
-            <section class="panel glass telemetry-panel">
-                <h2>LIVE TELEMETRY</h2>
-                <div class="telemetry-grid">
-                    <div class="stat-box">
-                        <label>HEART RATE</label>
-                        <div class="value"><span id="rppg-val">--</span> <small>BPM</small></div>
-                    </div>
-                    <div class="stat-box">
-                        <label>HEAD PITCH</label>
-                        <div class="value"><span id="pitch-val">0.0</span>&deg;</div>
-                    </div>
-                    <div class="stat-box">
-                        <label>HEAD YAW</label>
-                        <div class="value"><span id="yaw-val">0.0</span>&deg;</div>
-                    </div>
-                    <div class="stat-box">
-                        <label>DOMINANT SIGNAL</label>
-                        <div class="value text-accent" id="dom-signal">--</div>
-                    </div>
+                <svg
+                  id="trend"
+                  viewBox="0 0 700 120"
+                  role="img"
+                  aria-label="Recent fatigue score trend"
+                >
+                  <path class="gridline" d="M0 20H700M0 60H700M0 100H700" />
+                  <polyline id="trend-line" points="" />
+                </svg>
+                <p class="caption">
+                  Gaps indicate unavailable tracking. No predictive forecast is
+                  shown.
+                </p>
+              </article>
+            </div>
+            <div class="right-stack">
+              <article class="panel status-panel">
+                <div class="panel-head">
+                  <h2>Monitoring status</h2>
+                  <span class="small-label">LOCAL</span>
                 </div>
-            </section>
-
-            <!-- Orchestrator Decision & Thoughts Log -->
-            <section class="panel glass console-panel">
-                <h2>ORCHESTRATOR DECISIONS & THOUGHTS LOG</h2>
-                <div class="console-container" id="console-container">
-                    <div class="console-line"><span class="console-time">[SYSTEM]</span>ReAct loop loaded. Awaiting bio-telemetry events...</div>
+                <div class="score-wrap">
+                  <span id="score" class="score">—</span><span>/ 100</span>
                 </div>
-            </section>
-
-            <!-- 3-Min Prediction Graph -->
-            <section class="panel glass graph-panel">
-                <h2>3-MIN PREDICTION (LSTM)</h2>
-                <div class="chart-container">
-                    <canvas id="predictionChart"></canvas>
+                <p id="score-level">No valid measurement</p>
+                <div class="meter" aria-hidden="true">
+                  <div id="score-meter"></div>
                 </div>
-                <div class="stat-row">
-                    <span>Forecast:</span>
-                    <strong id="pred-val" class="text-accent">0.0</strong>
+                <p id="state-reason" class="caption">
+                  Your monitoring state will appear after a session starts.
+                </p>
+                <dl class="signal-list">
+                  <div>
+                    <dt>Head turn</dt>
+                    <dd id="metric-yaw">—</dd>
+                  </div>
+                  <div>
+                    <dt>Mouth ratio</dt>
+                    <dd id="metric-mar">—</dd>
+                  </div>
+                  <div>
+                    <dt>Capture latency, P95</dt>
+                    <dd id="metric-latency">—</dd>
+                  </div>
+                </dl>
+              </article>
+              <article class="panel">
+                <h2>Session controls</h2>
+                <p class="caption">
+                  Use live monitoring while stationary for this supervised
+                  demonstration.
+                </p>
+                <div class="button-stack">
+                  <button disabled id="start-live" class="primary">
+                    Start webcam <span aria-hidden="true">↗</span></button
+                  ><button disabled id="start-replay" class="secondary">
+                    Start replay</button
+                  ><button id="stop-session" class="quiet" disabled>
+                    Stop session
+                  </button>
                 </div>
-            </section>
-
-            <!-- Radar Chart Components -->
-            <section class="panel glass radar-panel">
-                <h2>FATIGUE COMPONENTS</h2>
-                <div class="chart-container">
-                    <canvas id="radarChart"></canvas>
+                <div class="tip">
+                  <span aria-hidden="true">◇</span>
+                  <p>
+                    First time here?
+                    <button disabled class="text-button" data-view="setup">
+                      Check your setup
+                    </button>
+                    and calibrate before monitoring.
+                  </p>
                 </div>
-            </section>
-        </main>
+              </article>
+              <div class="safety-note">
+                <strong>A useful signal, not a verdict.</strong>
+                <p>
+                  This demo cannot determine whether you are fit to drive. If
+                  you feel tired, stop at a safe place and rest.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="view-setup" class="view" hidden>
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">READY BEFORE YOU START</p>
+              <h1 tabindex="-1">A good setup makes a difference.</h1>
+              <p class="subtitle">
+                Check local components and find your baseline.
+              </p>
+            </div>
+            <button disabled id="refresh-setup" class="secondary">
+              Refresh checks
+            </button>
+          </div>
+          <div class="two-col">
+            <article class="panel">
+              <h2>Readiness checks</h2>
+              <div id="setup-checks" class="check-list">Loading checks…</div>
+              <button disabled id="audio-test" class="secondary">
+                Test local audio
+              </button>
+            </article>
+            <article class="panel">
+              <h2>Calibrate your camera</h2>
+              <p>
+                While stationary, start a live session. Face the camera with
+                even lighting and keep your eyes naturally open.
+              </p>
+              <p>
+                Collect 20 seconds of valid samples within 60 seconds. Poor
+                tracking pauses sample collection.
+              </p>
+              <button disabled id="calibrate" class="primary">
+                Start calibration</button
+              ><progress
+                id="calibration-progress"
+                value="0"
+                max="20"
+                aria-label="Valid calibration seconds"
+              ></progress>
+              <p id="calibration-status" role="status" class="caption">
+                No calibration in progress.
+              </p>
+            </article>
+          </div>
+        </section>
+        <section id="view-assistant" class="view" hidden>
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">HELP, WITH CONTEXT</p>
+              <h1 tabindex="-1">A little clarity goes a long way.</h1>
+              <p class="subtitle">
+                Local status for your session. Cited general knowledge from
+                Gemini.
+              </p>
+            </div>
+            <span class="badge">Real driver data stays local</span>
+          </div>
+          <div class="two-col">
+            <article class="panel">
+              <h2>Local assistance</h2>
+              <p class="caption">
+                Status and typed or spoken questions are processed on this
+                computer.
+              </p>
+              <button disabled id="local-status" class="primary">
+                Get local status
+              </button>
+              <form id="local-form" novalidate>
+                <label for="local-question">Local question</label
+                ><textarea
+                  class="resize-none"
+                  id="local-question"
+                  maxlength="1000"
+                  rows="3"
+                  placeholder="Ask about status, fatigue, breaks, calibration, or demo limitations"
+                ></textarea>
+                <div class="inline-buttons">
+                  <button disabled class="secondary" type="submit">
+                    Ask locally</button
+                  ><button
+                    disabled
+                    id="record-voice"
+                    class="quiet"
+                    type="button"
+                  >
+                    Record locally · 5 sec
+                  </button>
+                </div>
+              </form>
+              <p id="voice-status" class="caption" role="status">
+                Microphone is off.
+              </p>
+            </article>
+            <article class="panel">
+              <h2>Gemini guidance</h2>
+              <p id="assistant-status" class="caption" role="status">
+                Checking backend readiness…
+              </p>
+              <button
+                disabled
+                id="reload-assistant"
+                class="quiet"
+                type="button"
+              >
+                Reload assistant settings
+              </button>
+              <p class="caption">
+                Only the selected general topic or predefined artificial
+                scenario is sent to Gemini. No free-form driver input.
+              </p>
+              <form id="cloud-form" novalidate>
+                <label for="cloud-mode">Guidance mode</label
+                ><select id="cloud-mode">
+                  <option value="general">General knowledge</option>
+                  <option value="synthetic">Synthetic demo</option></select
+                ><label for="cloud-topic">Topic</label
+                ><select id="cloud-topic">
+                  <option value="fatigue">Fatigue precautions</option>
+                  <option value="breaks">Breaks and rest</option>
+                  <option value="calibration">Camera calibration</option>
+                  <option value="limitations">Demo limitations</option></select
+                ><label for="cloud-scenario">Synthetic scenario</label
+                ><select id="cloud-scenario">
+                  <option value="eye_closure">
+                    Artificial prolonged eye closure
+                  </option>
+                  <option value="trip_summary">
+                    Artificial trip summary
+                  </option></select
+                ><button disabled class="secondary" type="submit">
+                  Ask Gemini
+                </button>
+              </form>
+              <p class="caption">
+                Maximum 20 requests per UTC day, with at least 10 seconds
+                between requests. Provider quotas also apply.
+              </p>
+            </article>
+          </div>
+          <article class="panel answer-panel">
+            <div class="panel-head">
+              <h2>Answer</h2>
+              <span id="answer-source" class="small-label">WAITING</span>
+            </div>
+            <div id="assistant-answer" role="status">
+              Choose local status or a general topic to begin.
+            </div>
+            <p id="assistant-limitation" class="caption"></p>
+            <div id="citations"></div>
+          </article>
+        </section>
+        <section id="view-history" class="view" hidden>
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">YOUR LOCAL RECORD</p>
+              <h1 tabindex="-1">Every session, accounted for.</h1>
+              <p class="subtitle">
+                Review tracking coverage, alerts, and measured trends.
+              </p>
+            </div>
+            <button disabled id="refresh-history" class="secondary">
+              Refresh history
+            </button>
+          </div>
+          <article class="panel">
+            <h2>Recent sessions</h2>
+            <div id="history-list" class="history-list">
+              No sessions yet. Start a webcam session or replay.
+            </div>
+          </article>
+        </section>
+        <section id="view-report" class="view" hidden>
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">MEASURED, THEN RECORDED</p>
+              <h1 tabindex="-1">Session report</h1>
+              <p class="subtitle">
+                Generated locally from actual session records.
+              </p>
+            </div>
+            <button disabled id="print-report" class="secondary">
+              Print report
+            </button>
+          </div>
+          <article class="panel">
+            <div id="report-content"></div>
+            <div id="report-exports" class="inline-buttons"></div>
+          </article>
+        </section>
+        <section id="view-settings" class="view" hidden>
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">YOUR PREFERENCES</p>
+              <h1 tabindex="-1">Make DMS yours.</h1>
+              <p class="subtitle">
+                Stop the active session before changing settings.
+              </p>
+            </div>
+          </div>
+          <form id="settings-form" class="panel settings-grid" novalidate>
+            <div>
+              <h2>Camera</h2>
+              <label for="camera_index">Camera index</label
+              ><input id="camera_index" type="number" min="0" max="20" /><label
+                for="camera_width"
+                >Width</label
+              ><input
+                id="camera_width"
+                type="number"
+                min="160"
+                max="1920"
+              /><label for="camera_height">Height</label
+              ><input
+                id="camera_height"
+                type="number"
+                min="120"
+                max="1080"
+              /><label for="camera_fps">Capture FPS</label
+              ><input id="camera_fps" type="number" min="5" max="60" />
+            </div>
+            <div>
+              <h2>Demonstration thresholds</h2>
+              <label for="fatigue_warn_threshold">Warning threshold</label
+              ><input
+                id="fatigue_warn_threshold"
+                type="number"
+                min="1"
+                max="95"
+              /><label for="fatigue_crit_threshold">Critical threshold</label
+              ><input
+                id="fatigue_crit_threshold"
+                type="number"
+                min="6"
+                max="100"
+              /><label for="eye_closure_s"
+                >Prolonged eye closure (seconds)</label
+              ><input
+                id="eye_closure_s"
+                type="number"
+                min="0.5"
+                max="5"
+                step="0.1"
+              /><label for="retention_days">Retention (days)</label
+              ><input
+                id="retention_days"
+                type="number"
+                min="1"
+                max="365"
+              /><label class="checkbox"
+                ><input id="audio_enabled" type="checkbox" />Enable local
+                audio</label
+              >
+            </div>
+            <div class="settings-actions">
+              <button disabled class="primary" type="submit">
+                Save settings
+              </button>
+              <p id="settings-message" class="caption" role="status"></p>
+            </div>
+          </form>
+        </section>
+        <footer>
+          <span>Built for awareness. Designed for privacy.</span
+          ><span>Supervised demonstration</span>
+        </footer>
+      </main>
     </div>
-
-    <script src="app.js"></script>
-</body>
+    <dialog id="delete-dialog" aria-labelledby="delete-title">
+      <h2 id="delete-title">Delete this session?</h2>
+      <p>
+        This removes its local measurements and events. Export a copy first if
+        you need one.
+      </p>
+      <div class="inline-buttons">
+        <button disabled id="cancel-delete" class="secondary" autofocus>
+          Cancel</button
+        ><button disabled id="confirm-delete" class="danger">
+          Delete session
+        </button>
+      </div>
+    </dialog>
+  </body>
 </html>

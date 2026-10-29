@@ -1,127 +1,201 @@
-<div align="center">
-  
-# 🚗 DMS V5 SENTINEL
-### The Ultimate Agentic Driver Monitoring Ecosystem
+# DMS
 
-[![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white&style=for-the-badge)](#)
-[![MediaPipe](https://img.shields.io/badge/MediaPipe-Vision_Tasks-orange?logo=google&logoColor=white&style=for-the-badge)](#)
-[![FastAPI](https://img.shields.io/badge/FastAPI-WebSockets-teal?logo=fastapi&logoColor=white&style=for-the-badge)](#)
-[![Ollama](https://img.shields.io/badge/Ollama-Local_AI-red?logo=ollama&logoColor=white&style=for-the-badge)](#)
-[![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector_Memory-purple?logo=database&logoColor=white&style=for-the-badge)](#)
-[![YOLOv8](https://img.shields.io/badge/YOLOv8-Traffic_Context-yellow?logo=ultralytics&logoColor=black&style=for-the-badge)](#)
+A local driver-monitoring **demonstration** for Apple Silicon Macs. Webcam geometry, deterministic alerts, guided calibration, session history, reports, and replay run entirely on-device. An optional Gemini assistant answers curated general questions and analyzes synthetic scenarios using approved local documentation excerpts.
 
-<img src="https://raw.githubusercontent.com/n3r4zzurr0/svg-spinners/main/svg-css/pulse-multiple.svg" width="30"/> **SYSTEM ONLINE** 
+![DMS dashboard](docs/design/dashboard.png)
 
-DMS V5 SENTINEL is a highly advanced, 100% offline **Event-Driven Agentic System**. It moves beyond reactive alerts to actively analyze driver fatigue, maintain unified episodic/semantic memory, assess traffic context, and orchestrate protective interventions using an asynchronous multi-agent ReAct loop.
-
-</div>
+> [!IMPORTANT]
+> **Supervised Demonstration Limitations:** DMS is an experimental research prototype and technology demonstrator. It is not an automotive-grade or certified safety product. Fatigue scores and alert levels are heuristic indicators based on visible facial geometry; they do not assess medical condition or legal fitness to drive. Always rest when fatigued.
 
 ---
 
-## 🌟 Cinematic Dashboard & UI
+## Working Flow
 
-DMS V5 replaces traditional local GUIs with a **Premium Glassmorphism Web Dashboard** served via ultra-low latency WebSockets.
+```
+[Camera / Replay] ──► [Perception] ──► [Temporal Monitor] ──► [Safety Policy] ──► [Alerts / Audio]
+                          │                   │                      │
+                          ▼                   ▼                      ▼
+                    Landmarks 3D        PERCLOS, EAR,           Deterministic
+                   (solvePnP Pose)    Heuristic Score (0-100)    Transitions
+                                              │
+                                              ▼
+                                    [SQLite Local Storage] ◄──► [Web Dashboard]
+```
 
-*   **HUD Overlay:** Live camera stream rendered with Face Mesh bounding contours and real-time biometric stats directly painted on the frame.
-*   **Voice Chat Terminal:** Real-time conversational interface with the Sentinel Voice Agent.
-*   **LSTM Prediction Graphs:** Scrolling real-time charting forecasting fatigue 3 minutes into the future.
-*   **Orchestrator Console:** Terminal-style window showing live ReAct steps, thoughts, and cognitive logic execution.
+1. **Capture:** Ingests live frames from a webcam or a deterministic 30-second synthetic replay fixture.
+2. **Local Perception:** Resizes frames into a 640×480 canvas, tracks 478 3D facial landmarks using MediaPipe on CPU, calculates Eye Aspect Ratio (EAR) and Mouth Aspect Ratio (MAR), and estimates head pose (pitch/yaw/roll) using OpenCV SQPNP `solvePnP`.
+3. **Validated State:** Evaluates rolling 60-second time-weighted PERCLOS, measures consecutive eye closure, and computes a 0–100 composite fatigue score. Missing faces trigger an `unavailable` state; loss of head pose triggers `degraded` mode without fabricating zero readings.
+4. **Deterministic Alerts:** Applies fixed safety thresholds (warning at 55, critical at 72, immediate critical on eye closure $\ge 1.5\text{s}$), 5-point exit hysteresis, and 3-second recovery stabilization.
+5. **Dashboard & History:** Telemetry streams to the browser via loopback WebSockets at 5 Hz; metrics are downsampled to 1 Hz in SQLite WAL storage for reporting and export.
 
 ---
 
-## 🧠 Core Architecture: Zero-Coupling Event Bus
+## Architecture
 
-At the heart of V5 is the **EventBus**—a highly concurrent publisher/subscriber engine that completely decouples perception, orchestration, and UI updates.
+The safety-critical monitoring pipeline is completely local and decoupled from cloud inference:
 
 ```mermaid
-graph TD;
-    Camera[📷 Web Camera] --> FP[Perception Pipeline]
-    Mic[🎤 Microphone] --> VP[Voice Pipeline]
-    
-    FP --> |FRAME_PROCESSED| Bus((Event Bus))
-    FP --> |FATIGUE_SCORE| Bus
-    VP --> |VOICE_TRANSCRIPT| Bus
-    
-    Bus --> |FATIGUE_CRITICAL| Orch[Orchestrator ReAct Loop]
-    Bus --> |VOICE_INTENT| Orch
-    
-    Orch --> SA[Safety Agent]
-    Orch --> RAG[RAG Memory Engine]
-    
-    SA --> |AGENT_TASK| Bus
-    SA --> |VOICE_RESPONSE| Bus
-    SA --> |UI_OVERLAY_UPDATE| Bus
-    
-    Bus --> Web[FastAPI WebServer]
-    Web --> Client[Live HUD Dashboard]
+flowchart TD
+    subgraph Local["On-Device Pipeline (Privacy Boundary)"]
+        Cam["Webcam / Replay Fixture"] --> Latest["LatestProcessor (Capacity 1)"]
+        Latest --> Pipe["Perception (MediaPipe + solvePnP)"]
+        Pipe --> Mon["Monitor (PERCLOS, EAR, MAR, Pose)"]
+        Mon --> Safety["Safety Policy (State Machine)"]
+        Safety --> Alert["Alert Engine (macOS 'say' Audio)"]
+        Mon --> Store[("SQLite Storage (WAL)")]
+        Safety --> Store
+        Mon --> WS["WebSocket Hub (5 Hz Telemetry)"]
+        WS --> UI["Web Dashboard (Local Browser)"]
+    end
+
+    subgraph Cloud["Optional Cloud Path (Isolated)"]
+        UI -.->|Curated Topic / Scenario| Assist["Assistant Service"]
+        KB[("Approved Docs Excerpts")] --> Assist
+        Assist -.->|Standard Tier (store=False)| Gemini["Google Gemini API"]
+        Gemini -.->|Structured JSON + Citations| Assist
+    end
 ```
 
 ---
 
-## 🔬 Elite 9-Signal Composite Fatigue Engine
+## Technical Stack
 
-The V5 perception engine utilizes MediaPipe's Task API and an adaptive Kalman Filter Bank (<0.5ms/frame) to smooth 478 3D landmarks in real-time, feeding a comprehensive fusion engine.
-
-| Signal | Feature Description | Core Algorithm |
-| :--- | :--- | :--- |
-| **EAR / Blinks** | Eye Aspect Ratio + Blink Velocity | Soukupová & Čech + 1D Kalman |
-| **PERCLOS** | Percentage of Eye Closure | Weighted rolling threshold |
-| **Head Sway** | Nod frequency + sway oscillation | Head geometry pose vector variance |
-| **MAR / Yawn** | 3D Mouth Aspect Ratio | Landmark Euclidean ratios |
-| **Gaze Quality** | Attention heatmap + saccade speed | Iris tracking + saccade classification |
-| **rPPG** | Heart rate & HRV-based stress | Forehead green-channel FFT |
-| **Traffic Context**| Vehicle density & lane-change risk | YOLOv8 Scene Understanding |
-| **LSTM Forecast**| 3-minute predictive fatigue trending | PyTorch LSTM |
+| Component | Technology | Purpose |
+| --- | --- | --- |
+| **Vision Worker** | MediaPipe Face Landmarker | Extracts 478 facial landmarks on CPU without remote telemetry. |
+| **Geometry** | OpenCV (`solvePnP`) | Estimates 3D head pose angles from 6 canonical facial points. |
+| **Backend & Web** | FastAPI, Uvicorn, WebSockets | Serves local REST APIs and streaming telemetry over loopback (`127.0.0.1`). |
+| **Storage** | SQLite, `aiosqlite` | Bounded batched storage for session metrics (1 Hz), events, and quotas. |
+| **Speech Audio** | Native macOS `say` | Serialized audible voice alerts with critical alert preemption. |
+| **AI Assistant** | `google-genai` SDK 2 | Optional curated Q&A with strict schema and local citation checking. |
+| **Local Search** | ChromaDB, Sentence-Transformers | Optional on-device hybrid semantic retrieval (dense + BM25). |
+| **Local Voice** | `faster-whisper`, `sounddevice` | Optional push-to-talk microphone capture and on-device transcription. |
 
 ---
 
-## 💬 Traffic-Aware Voice Agent & RAG
+## Quick Start
 
-The **Sentinel Voice Agent** continuously listens via **Silero VAD** gating and transcribes using **Faster-Whisper**. 
+Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). Clone the repository and install dependencies:
 
-It provides context-aware interventions utilizing:
-1.  **ChromaDB Vector Store:** Retrieves safety guidelines and past driver profiles via Semantic RAG.
-2.  **Traffic Awareness:** Adjusts its tone and recommendations if it detects heavy traffic or lane-change risk via YOLOv8.
-3.  **Local LLM (Ollama):** Classifies intentions and generates conversational responses entirely offline.
-
-> **Driver:** *"I'm starting to feel quite tired."*  
-> **Sentinel:** *"Noted. Your blink velocity has slowed down and your fatigue score is rising. Traffic is currently sparse. I recommend pulling over at the next exit for a rest."*
-
----
-
-## 🛠️ Installation & Execution
-
-### 📋 Prerequisites
-*   macOS (M-Series optimized), Linux, or Windows.
-*   **uv** (Ultra-fast Python package installer).
-*   **Ollama** running locally for LLMs.
-
-### ⚡ Setup & Run
-
-```bash
-# 1. Install dependencies extremely fast using uv
-uv sync
-
-# 2. Start the V5 Event-Driven Orchestrator & Web Server
-uv run python main_v5.py
+```sh
+git clone https://github.com/aman-bhaskar-codes/dms.git
+cd dms
+uv sync --locked --extra gemini
+uv run dms check
+uv run dms setup-models
+uv run dms run
 ```
 
-*Open `http://localhost:8000` in your browser to access the Sentinel Dashboard.*
+Open **http://127.0.0.1:8000** in your browser. Choose **Start replay** to evaluate the 30-second synthetic scenario, or **Start webcam** while stationary. For automatic replay launch:
+
+```sh
+uv run dms run --replay
+```
+
+Application startup never downloads models automatically; `uv run dms setup-models` verifies asset checksums locally before execution.
 
 ---
 
-## 📁 Project Structure
+## Environment Configuration
 
-*   [`core/`](core/) — The async EventBus, event payloads (`models.py`), and system configuration.
-*   [`perception/`](perception/) — MediaPipe FaceLandmarker, Kalman Filter Bank, rPPG, and LSTM Fatigue Engine.
-*   [`detection/`](detection/) — YOLOv8 Traffic and Scene context analyzers.
-*   [`agents/`](agents/) — ReAct `asyncio.PriorityQueue` loop, Safety escalation, and Coaching logic.
-*   [`voice/`](voice/) — Silero VAD, Whisper STT, and Text-to-Speech integration.
-*   [`memory/`](memory/) — Unified memory stack (Working buffer, Episodic SQLite, Semantic ChromaDB).
-*   [`ui/web/`](ui/web/) — FastAPI WebSocket server and cinematic HTML/CSS/JS frontend.
-*   [`rag/`](rag/) — Semantic search engine for driver history and safety manuals.
+Copy the example environment file to `.env`:
+
+### POSIX Shell (macOS / Linux)
+```sh
+cp .env.example .env
+```
+
+### PowerShell (Windows)
+```powershell
+Copy-Item .env.example .env
+```
+
+Set `GEMINI_API_KEY` on the backend if cloud assistance is desired. Never expose keys in browser client code. `GEMINI_MODEL` defaults to `gemini-3.5-flash-lite`. Verify model access in [Google AI Studio](https://aistudio.google.com/).
+
+> [!NOTE]
+> **Inherited Storage Directory:** SQLite databases, calibrations, and settings are saved under `data/sentinel/sentinel.db`. This path is intentionally preserved across updates to maintain your historical sessions, driver calibrations, and daily quota tracking without data migration.
 
 ---
-<div align="center">
-  <i>Engineered for unparalleled safety, absolute privacy, and zero-latency autonomous interventions.</i>
-</div>
+
+## Optional Knowledge and Voice Extras
+
+Core operation works fully offline. Two optional enhancements can be installed:
+
+### 1. Hybrid Knowledge Retrieval
+Installs local sentence-transformers embeddings, ChromaDB, and BM25 rank fusion:
+
+```sh
+uv sync --locked --extra gemini --extra knowledge
+uv run dms setup-models --knowledge
+```
+
+### 2. On-Device Voice Push-to-Talk
+Downloads the local quantized Whisper model for 5-second microphone transcription:
+
+```sh
+uv sync --locked --extra gemini --extra knowledge --extra voice
+uv run dms setup-models --knowledge --voice
+```
+
+In Assistant, click **Record locally · 5 sec** to capture audio, transcribe on-device, and answer fatigue, status, or calibration queries. The microphone is never active outside this 5-second window.
+
+---
+
+## Features and Capabilities
+
+- **Webcam Monitoring:** Real-time facial tracking, EAR, MAR, pitch, and yaw.
+- **Guided Calibration:** Requires 20 valid frontal-face seconds within a 60-second stationary window to establish an individualized EAR baseline.
+- **Deterministic Alerts:** Multi-tier warnings (Warning: 55, Critical: 72) and immediate critical alert on eye closure exceeding 1.5 seconds.
+- **Acknowledge & Silence:** Silences active speech alerts without masking the underlying visual safety state.
+- **Sandboxed Assistant:** Handles curated general questions and synthetic scenario interpretations; real biometric values, frames, and trip transcripts are strictly forbidden from entering cloud prompts.
+- **Reports & Exports:** Review session duration, tracking coverage, event chronologies, and SVG score trends. Export data to JSON, CSV, or printable HTML.
+
+---
+
+## Platform Support
+
+| Platform | Support Tier | Details |
+| --- | --- | --- |
+| **Apple Silicon macOS** | **Tier 1 (Supported)** | Verified hardware capture, microphone input, native `say` audio, and local neural network execution. |
+| **Linux** | **Headless / CI Only** | Supported for Python runtime, unit tests, and synthetic replay. Physical webcam and desktop speech synthesis are unverified; macOS `say` is unavailable. |
+| **Windows** | **Not Supported** | Native startup is currently blocked by Unix-specific file locking (`fcntl.flock`). Running in WSL2 requires manual X11/PulseAudio bridging. |
+
+---
+
+## Development and Verification
+
+```sh
+# Run unit and integration tests (44 tests)
+uv run pytest -q
+
+# Code formatting and linting
+uv run ruff check .
+uv run ruff format --check .
+
+# Static type verification
+uv run mypy
+
+# Playwright browser acceptance test (requires running dms server)
+uv run dms run &
+SERVER_PID=$!
+uv run python scripts/browser_check.py
+kill $SERVER_PID
+
+# Accelerated signal-policy load benchmark
+uv run python scripts/benchmark.py
+
+# Synthetic replay memory soak
+uv run python scripts/soak.py --seconds 3600
+```
+
+---
+
+## Documentation Links
+
+- [Architecture and API Reference](docs/architecture.md)
+- [Setup and Configuration Guide](docs/setup.md)
+- [Demonstration Guide](docs/demo.md)
+- [Verification Record and Benchmarks](docs/verification.md)
+- [Contributing Guide](docs/contributing.md)
+- [Design Contract](DESIGN.md)
+- [Interaction Contract](UX-CONTRACT.md)

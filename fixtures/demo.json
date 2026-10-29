@@ -1,0 +1,2434 @@
+{
+  "name": "Synthetic monitoring scenarios",
+  "frames": [
+    {
+      "t": 0.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 0.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 0.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 0.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 0.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 0.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 0.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 0.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 0.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 0.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 1.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 1.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 1.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 1.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 1.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 1.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 1.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 1.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 1.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 1.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 2.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 2.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 2.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 2.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 2.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 2.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 2.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 2.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 2.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 2.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 3.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 3.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 3.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 3.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 3.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 3.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 3.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 3.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 3.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 3.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 4.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 4.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 4.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 4.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 4.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 4.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 4.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 4.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 4.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 4.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 5.0,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 5.1,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 5.2,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 5.3,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 5.4,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 5.5,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 5.6,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 5.7,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 5.8,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 5.9,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 6.0,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 6.1,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 6.2,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 6.3,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 6.4,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 6.5,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 6.6,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 6.7,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 6.8,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 6.9,
+      "face_detected": true,
+      "ear": 0.1,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 7.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 7.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 7.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 7.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 7.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 7.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 7.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 7.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 7.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 7.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 8.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 8.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 8.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 8.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 8.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 8.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 8.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 8.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 8.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 8.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 9.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 9.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 9.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 9.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 9.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 9.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 9.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 9.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 9.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 9.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 10.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 10.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 10.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 10.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 10.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 10.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 10.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 10.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 10.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 10.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 11.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 11.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 11.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 11.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 11.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 11.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 11.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 11.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 11.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 11.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 12.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 12.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 12.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 12.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 12.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 12.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 12.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 12.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 12.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 12.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.8,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 13.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 13.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 13.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 13.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 13.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 13.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 13.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 13.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 13.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 13.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 14.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 14.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 14.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 14.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 14.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 14.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 14.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 14.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 14.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 14.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 15.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 15.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 15.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 15.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 15.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 15.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 15.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 15.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 15.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 15.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 16.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 16.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 16.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 16.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 16.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 16.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 16.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 16.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 16.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 16.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 17.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 17.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 17.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 17.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 17.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 17.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 17.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 17.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 17.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 17.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 35
+    },
+    {
+      "t": 18.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 18.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 18.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 18.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 18.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 18.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 18.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 18.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 18.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 18.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 19.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 19.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 19.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 19.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 19.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 19.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 19.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 19.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 19.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 19.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 20.0,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 20.1,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 20.2,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 20.3,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 20.4,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 20.5,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 20.6,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 20.7,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 20.8,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 20.9,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 21.0,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 21.1,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 21.2,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 21.3,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 21.4,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 21.5,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 21.6,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 21.7,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 21.8,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 21.9,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 22.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 22.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 22.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 22.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 22.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 22.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 22.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 22.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 22.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 22.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 23.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 23.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 23.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 23.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 23.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 23.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 23.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 23.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 23.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 23.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 24.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 24.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 24.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 24.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 24.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 24.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 24.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 24.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 24.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 24.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 25.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 25.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 25.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 25.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 25.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 25.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 25.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 25.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 25.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 25.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 26.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 26.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 26.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 26.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 26.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 26.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 26.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 26.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 26.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 26.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 27.0,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 27.1,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 27.2,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 27.3,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 27.4,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 27.5,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 27.6,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 27.7,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 27.8,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 27.9,
+      "face_detected": true,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0
+    },
+    {
+      "t": 28.0,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 28.1,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 28.2,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 28.3,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 28.4,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 28.5,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 28.6,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 28.7,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 28.8,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 28.9,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 29.0,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 29.1,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 29.2,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 29.3,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 29.4,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 29.5,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 29.6,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 29.7,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 29.8,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 29.9,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    },
+    {
+      "t": 30.0,
+      "face_detected": false,
+      "ear": 0.3,
+      "mar": 0.2,
+      "pitch": 0,
+      "yaw": 0,
+      "reason": "synthetic_camera_failure"
+    }
+  ]
+}

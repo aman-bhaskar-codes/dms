@@ -1,62 +1,50 @@
-from pydantic_settings import BaseSettings
-from typing import Optional
+"""One configuration source for the supported Sentinel application."""
+
+from pathlib import Path
+from pydantic import Field, SecretStr, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class Settings(BaseSettings):
-    # Camera
-    camera_index: int = 0
-    camera_width: int = 1280
-    camera_height: int = 720
-    camera_fps: int = 30
+    model_config = SettingsConfigDict(env_file=ROOT / ".env", extra="ignore")
+    camera_index: int = Field(0, ge=0, le=20)
+    camera_width: int = Field(640, ge=160, le=1920)
+    camera_height: int = Field(480, ge=120, le=1080)
+    camera_fps: int = Field(30, ge=5, le=60)
     flip_horizontal: bool = True
+    web_host: str = "127.0.0.1"
+    web_port: int = Field(8000, ge=1024, le=65535)
+    data_dir: Path = ROOT / "data" / "sentinel"
+    model_path: Path = ROOT / "face_landmarker.task"
+    knowledge_dir: Path = ROOT / "docs" / "knowledge"
+    embedding_path: Path = ROOT / "models" / "all-MiniLM-L6-v2"
+    whisper_path: Path = ROOT / "models" / "whisper-base-en"
+    gemini_api_key: SecretStr = SecretStr("")
+    gemini_model: str = "gemini-3.5-flash-lite"
+    gemini_daily_cap: int = Field(20, ge=0, le=20)
+    gemini_interval_s: float = Field(10, ge=10)
+    fatigue_warn_threshold: float = Field(55, ge=1, le=95)
+    fatigue_crit_threshold: float = Field(72, ge=6, le=100)
+    microsleep_ear_threshold: float = Field(0.18, ge=0.05, le=0.4)
+    eye_closure_s: float = Field(1.5, ge=0.5, le=5)
+    alert_cooldown_s: float = Field(8, ge=8)
+    retention_days: int = Field(30, ge=1, le=365)
+    audio_enabled: bool = True
+    max_frame_age_s: float = Field(2, ge=0.2, le=5)
 
-    # Detection
-    yolo_model: str = "yolov8x.pt"          # upgraded from yolov8n
-    yolo_traffic_model: str = "models/traffic_dms_v5.onnx"  # fine-tuned
-    mediapipe_model_complexity: int = 1     # 0=lite 1=full 2=heavy
-    use_face_mesh_attention: bool = True
+    @model_validator(mode="after")
+    def validate_thresholds(self):
+        if self.fatigue_crit_threshold < self.fatigue_warn_threshold + 5:
+            raise ValueError("Critical threshold must be at least five points above warning")
+        if self.web_host not in ("127.0.0.1", "localhost", "::1"):
+            raise ValueError("This local application must bind to loopback")
+        return self
 
-    # RAG & LLM
-    ollama_base_url: str = "http://localhost:11434"
-    primary_llm: str = "llama3.2:3b"
-    fallback_llm: str = "phi4-mini"
-    embed_model: str = "nomic-embed-text"
-    rag_top_k: int = 5
-    rag_rerank: bool = True
-
-    # Voice
-    whisper_model: str = "base.en"          # or "small.en" for accuracy
-    whisper_device: str = "cpu"             # "cuda" if available
-    tts_engine: str = "coqui"              # "pyttsx3" as fallback
-    vad_threshold: float = 0.5
-
-    # Memory
-    db_path: str = "data/dms_v5.db"
-    chroma_path: str = "data/chroma_v5"
-    graph_db_path: str = "data/graph.db"    # NEW: SQLite graph
-    memory_max_working_items: int = 200
-    semantic_embed_interval_s: int = 300    # embed every 5 min
-
-    # Alerts
-    fatigue_warn_threshold: float = 55.0
-    fatigue_crit_threshold: float = 72.0
-    microsleep_ear_threshold: float = 0.18
-    alert_cooldown_s: float = 8.0
-
-    # UI
-    web_port: int = 8080
-    debug_mode: bool = False
-    quit_key: int = ord('q')
-
-    # Coaching
-    coaching_interval_min: float = 5.0
-    telegram_bot_token: Optional[str] = None
-    telegram_chat_id: Optional[str] = None
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
+    @property
+    def db_path(self) -> Path:
+        return self.data_dir / "sentinel.db"
 
 
 settings = Settings()

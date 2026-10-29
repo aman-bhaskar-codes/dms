@@ -114,3 +114,12 @@ data/*.png
 .idea/
 *.swp
 *.swo
+
+# Sentinel generated state and explicitly installed model directories
+data/sentinel/
+models/all-MiniLM-L6-v2/
+models/whisper-base-en/
+models/installed-models.json
+.superpowers/
+playwright-report/
+test-results/
