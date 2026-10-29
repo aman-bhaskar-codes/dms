@@ -47,7 +47,7 @@ def create_app(config=None):
         finally:
             await runtime.close()
 
-    app = FastAPI(title="DMS Sentinel", version="0.6.0", lifespan=lifespan)
+    app = FastAPI(title="DMS", lifespan=lifespan)
     app.state.runtime = runtime
     app.add_middleware(
         TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]", "testserver"]
@@ -138,7 +138,7 @@ def create_app(config=None):
     @app.get("/api/v1/sessions/{sid}/export")
     async def export(sid: str, format: Literal["json", "csv", "html"] = "json"):
         data = await report(sid)
-        headers = {"Content-Disposition": f'attachment; filename="sentinel-session.{format}"'}
+        headers = {"Content-Disposition": f'attachment; filename="dms-session.{format}"'}
         if format == "json":
             return Response(json.dumps(data), media_type="application/json", headers=headers)
         if format == "csv":
@@ -165,7 +165,7 @@ def create_app(config=None):
         timeline = "".join("<li>" + html.escape(str(e)) + "</li>" for e in data["events"])
         return HTMLResponse(
             '<!doctype html><html lang="en"><meta charset="utf-8">'
-            "<title>Sentinel local report</title><h1>Sentinel session report</h1>"
+            "<title>DMS local report</title><h1>DMS session report</h1>"
             "<p>Local heuristic demonstration. No medical or predictive interpretation.</p>"
             "<dl>" + rows + "</dl><h2>Event timeline</h2><ul>" + timeline + "</ul></html>",
             headers=headers,
@@ -250,7 +250,7 @@ def create_app(config=None):
             raise HTTPException(
                 409, "Audio is disabled. Enable local audio in Settings before testing."
             )
-        runtime.audio.speak("Sentinel audio test. Local alerts are ready.")
+        runtime.audio.speak("DMS audio test. Local alerts are ready.")
         return {"queued": True}
 
     safe_settings = (

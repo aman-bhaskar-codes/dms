@@ -14,7 +14,7 @@ class LocalVoice:
         if self.busy:
             raise ValueError("A recording is already in progress")
         if not self.path.is_dir():
-            raise ValueError("Install the local Whisper model with sentinel setup-models --voice")
+            raise ValueError("Install the local Whisper model with dms setup-models --voice")
         self.busy = True
         try:
             return await asyncio.to_thread(self._record)

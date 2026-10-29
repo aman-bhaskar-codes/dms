@@ -416,8 +416,8 @@ wheels = [
 ]
 
 [[package]]
-name = "dms-sentinel"
-version = "0.6.0"
+name = "dms"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },

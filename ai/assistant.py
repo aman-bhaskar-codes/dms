@@ -147,7 +147,7 @@ class AssistantService:
             )
         if any(word in normalized for word in ("pulse", "heart rate", "heartbeat")):
             return AssistantResponse(
-                answer="Sentinel does not measure heart rate. It monitors visible facial geometry only."
+                answer="DMS does not measure heart rate. It monitors visible facial geometry only."
             )
         docs = await asyncio.to_thread(self.knowledge.search, normalized)
         return self.guidance(docs)

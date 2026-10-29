@@ -5,7 +5,12 @@ import sys
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
-base = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8000"
+base = (
+    [arg for arg in sys.argv[1:] if not arg.startswith("--")][0]
+    if any(not arg.startswith("--") for arg in sys.argv[1:])
+    else "http://127.0.0.1:8000"
+)
+save_screenshot = "--save-screenshot" in sys.argv
 with sync_playwright() as p:
     browser = p.chromium.launch()
     page = browser.new_page(viewport={"width": 1440, "height": 900})
@@ -17,9 +22,11 @@ with sync_playwright() as p:
     page.get_by_text("Synthetic replay", exact=True).wait_for()
     page.wait_for_timeout(1400)
     assert page.locator("#state").inner_text() == "Monitoring"
-    page.screenshot(
-        path=str(Path(__file__).resolve().parents[1] / "docs/design/dashboard.png"), full_page=True
-    )
+    if save_screenshot:
+        page.screenshot(
+            path=str(Path(__file__).resolve().parents[1] / "docs/design/dashboard.png"),
+            full_page=True,
+        )
     page.get_by_role("button", name="Stop session", exact=True).click()
     page.get_by_role("button", name="History", exact=True).click()
     page.get_by_role("button", name="Open report").first.click()
@@ -41,7 +48,7 @@ with sync_playwright() as p:
         "Assistant settings reloaded. Your monitoring session is unchanged.", exact=True
     ).wait_for()
     page.get_by_role("button", name="Settings", exact=True).click()
-    page.get_by_role("heading", name="Make Sentinel yours.").wait_for()
+    page.get_by_role("heading", name="Make DMS yours.").wait_for()
     original_settings = page.request.get(base + "/api/v1/settings").json()
     page.get_by_label("Warning threshold").fill("90")
     page.get_by_label("Critical threshold").fill("70")

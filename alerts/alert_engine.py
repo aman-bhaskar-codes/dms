@@ -1,65 +1,69 @@
-"""
-Alert Engine V4 — handles alert state machine, deduplication, and TTS routing.
-"""
-import time
-from config import settings
-from alerts.tts_engine import TTSEngine
-from alerts.telegram_notifier import TelegramNotifier
-from memory.driver_memory import DriverMemory
+"""Local serialized macOS audio, with critical preemption and failure status."""
+
+import asyncio
+import shutil
+import sys
 
 
 class AlertEngine:
-    def __init__(self, tts: TTSEngine, memory: DriverMemory, telegram: TelegramNotifier):
-        self.tts = tts
-        self.memory = memory
-        self.telegram = telegram
-        self._last_alert_time = 0.0
-        self._active_alerts = {}
+    def __init__(self, enabled=True):
+        self.enabled = enabled
+        self.queue = asyncio.PriorityQueue(maxsize=8)
+        self.process = None
+        self.task = None
+        self.sequence = 0
+        self.last_error = ""
 
-    async def trigger(self, event_type: str, severity: str, score: float = 0.0, details: dict = None):
-        """
-        event_type: 'fatigue', 'distraction', 'microsleep', 'yawn', 'phone'
-        severity: 'mild', 'warning', 'critical'
-        """
-        now = time.time()
-        
-        # Per-event-type cooldowns to avoid database spamming and high-frequency alert loops
-        # Critical: 5s, Warning: 10s, Mild/Other: 30s
-        cooldown = 5.0 if severity == "critical" else (10.0 if severity == "warning" else 30.0)
-        
-        if event_type in self._active_alerts:
-            last_t = self._active_alerts[event_type]
-            if now - last_t < cooldown:
-                return
-                
-        self._active_alerts[event_type] = now
-        self._last_alert_time = now
-        
-        # Log to memory database
-        await self.memory.log_event(event_type, severity, score, details or {})
-        
-        # Route to TTS
-        msg = self._get_tts_message(event_type, severity)
-        priority = 0 if severity == "critical" else (1 if severity == "warning" else 2)
-        if msg:
-            self.tts.speak(msg, priority=priority)
-            
-        # Route to Telegram if critical
-        if severity == "critical":
-            await self.telegram.send_alert(
-                f"Event: {event_type.upper()}\nScore: {score:.1f}\nDetails: {details}"
-            )
+    def start(self):
+        self.task = asyncio.create_task(self._run())
 
-    def _get_tts_message(self, event_type: str, severity: str) -> str:
-        if event_type == "fatigue":
-            if severity == "critical": return settings.TTS_MESSAGES["fatigue_high"]
-            if severity == "warning": return settings.TTS_MESSAGES["drowsy_warn"]
-        elif event_type == "microsleep":
-            return settings.TTS_MESSAGES["drowsy_crit"]
-        elif event_type == "yawn" and severity == "warning":
-            return settings.TTS_MESSAGES["yawn"]
-        elif event_type == "distraction":
-            return settings.TTS_MESSAGES["distracted"]
-        elif event_type == "phone":
-            return settings.TTS_MESSAGES["phone"]
-        return ""
+    def speak(self, text, critical=False):
+        if not self.enabled:
+            return
+        if critical:
+            if self.process and self.process.returncode is None:
+                self.process.terminate()
+            # Obsolete coaching and announcements must not follow a critical alert.
+            while not self.queue.empty():
+                self.queue.get_nowait()
+                self.queue.task_done()
+        self.sequence += 1
+        if not self.queue.full():
+            self.queue.put_nowait((0 if critical else 10, self.sequence, text[:1000]))
+
+    def silence(self):
+        if self.process and self.process.returncode is None:
+            self.process.terminate()
+        while not self.queue.empty():
+            self.queue.get_nowait()
+            self.queue.task_done()
+
+    async def _run(self):
+        while True:
+            _, _, text = await self.queue.get()
+            try:
+                if sys.platform != "darwin" or not shutil.which("say"):
+                    self.last_error = "macOS speech is unavailable; visual alerts remain active"
+                    continue
+                self.process = await asyncio.create_subprocess_exec(
+                    "say",
+                    text,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                exit_code = await self.process.wait()
+                if exit_code not in (0, -15):
+                    self.last_error = "Audio output failed; visual alerts remain active"
+                elif exit_code == 0:
+                    self.last_error = ""
+            except Exception:
+                self.last_error = "Audio output failed; visual alerts remain active"
+            finally:
+                self.process = None
+                self.queue.task_done()
+
+    async def shutdown(self):
+        self.silence()
+        if self.task:
+            self.task.cancel()
+            await asyncio.gather(self.task, return_exceptions=True)

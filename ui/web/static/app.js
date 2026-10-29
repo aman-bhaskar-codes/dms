@@ -608,7 +608,7 @@ async function openReport(id) {
     const a = node("a", "Export " + format.toUpperCase(), "export-link");
     a.href =
       "/api/v1/sessions/" + encodeURIComponent(id) + "/export?format=" + format;
-    a.download = "sentinel-session." + format;
+    a.download = "dms-session." + format;
     exports.append(a);
   }
 }

@@ -9,7 +9,7 @@ class LatestProcessor:
         self.process, self.cleanup = process, cleanup
         self.queue = asyncio.Queue(maxsize=1)
         self.results = asyncio.Queue(maxsize=1)
-        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sentinel-perception")
+        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dms-perception")
         self.dropped = 0
         self.closed = False
         self.done = asyncio.Event()

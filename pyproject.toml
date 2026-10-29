@@ -3,8 +3,8 @@ requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dms-sentinel"
-version = "0.6.0"
+name = "dms"
+version = "0.1.0"
 description = "Local driver monitoring demonstration with optional Gemini assistance"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -19,13 +19,13 @@ voice = ["faster-whisper>=1.1,<2", "sounddevice>=0.5,<1"]
 knowledge = ["sentence-transformers>=3,<6", "chromadb>=1,<2", "rank-bm25>=0.2,<1"]
 
 [project.scripts]
-sentinel = "main_v5:cli"
+dms = "main:cli"
 
 [dependency-groups]
 dev = ["pytest>=8,<10", "pytest-asyncio>=0.24,<2", "ruff>=0.9,<1", "mypy>=1.13,<2", "playwright>=1.49,<2"]
 
 [tool.setuptools]
-py-modules = ["main_v5"]
+py-modules = ["main"]
 
 [tool.setuptools.packages.find]
 include = ["ai*", "core*", "perception*", "agents*", "alerts*", "memory*", "rag*", "voice*", "ui*"]
@@ -40,7 +40,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
-include = ["core/*.py", "agents/safety_agent.py", "alerts/alert_engine_v5.py", "perception/pipeline.py", "perception/fatigue_engine_v5.py", "memory/store.py", "rag/knowledge.py", "ai/assistant.py", "voice/local.py", "ui/web/server.py", "main_v5.py", "tests/*.py", "scripts/*.py"]
+include = ["core/*.py", "agents/safety_agent.py", "alerts/alert_engine.py", "perception/pipeline.py", "memory/store.py", "rag/knowledge.py", "ai/assistant.py", "voice/local.py", "ui/web/server.py", "main.py", "tests/*.py", "scripts/*.py"]
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]

@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from agents.safety_agent import SafetyPolicy
 from ai.assistant import AssistantService
-from alerts.alert_engine_v5 import AlertEngineV5
+from alerts.alert_engine import AlertEngine
 from core.bus import EventBus, EventTopic
 from core.config import ROOT, Settings
 from core.contracts import MonitoringSnapshot
@@ -24,7 +24,7 @@ class Runtime:
         self.store = Store(self.config.db_path)
         self.monitor = Monitor(self.config)
         self.policy = SafetyPolicy(self.config)
-        self.audio = AlertEngineV5(self.config.audio_enabled)
+        self.audio = AlertEngine(self.config.audio_enabled)
         self.voice = LocalVoice(self.config.whisper_path)
         self.bus = EventBus()
         self.knowledge = KnowledgeBase(
@@ -71,7 +71,7 @@ class Runtime:
         except BlockingIOError as error:
             self.instance_lock.close()
             self.instance_lock = None
-            raise RuntimeError("Sentinel is already running with this data directory") from error
+            raise RuntimeError("DMS is already running with this data directory") from error
         try:
             await self.store.connect()
         except BaseException:
@@ -203,9 +203,9 @@ class Runtime:
         from core.setup import verify_asset
 
         if not verify_asset(self.config.model_path):
-            raise FileNotFoundError("Run sentinel setup-models")
+            raise FileNotFoundError("Run dms setup-models")
         loop = asyncio.get_running_loop()
-        camera_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sentinel-camera")
+        camera_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dms-camera")
         processor = FrameProcessor(self.config)
         worker = asyncio.create_task(processor.worker.run())
         cap = None

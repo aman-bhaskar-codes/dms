@@ -29,7 +29,7 @@ def check_setup(config=None, probe=False):
     config.data_dir.mkdir(parents=True, exist_ok=True)
     try:
         with tempfile.TemporaryFile(dir=config.data_dir) as f:
-            f.write(b"sentinel storage check")
+            f.write(b"dms storage check")
         storage = "ready"
     except OSError:
         storage = "not writable"
@@ -41,7 +41,7 @@ def check_setup(config=None, probe=False):
             else "checksum mismatch"
             if config.model_path.is_file()
             else "missing",
-            "action": "sentinel setup-models",
+            "action": "dms setup-models",
         },
         storage={"status": storage},
         camera={

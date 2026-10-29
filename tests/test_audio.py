@@ -1,9 +1,9 @@
 import asyncio
-from alerts.alert_engine_v5 import AlertEngineV5
+from alerts.alert_engine import AlertEngine
 
 
 async def test_nonzero_audio_exit_is_reported_without_affecting_monitoring(monkeypatch):
-    import alerts.alert_engine_v5 as audio
+    import alerts.alert_engine as audio
 
     class FailedAudio:
         returncode = 1
@@ -17,7 +17,7 @@ async def test_nonzero_audio_exit_is_reported_without_affecting_monitoring(monke
     monkeypatch.setattr(audio.sys, "platform", "darwin")
     monkeypatch.setattr(audio.shutil, "which", lambda name: "/usr/bin/say")
     monkeypatch.setattr(audio.asyncio, "create_subprocess_exec", spawn)
-    engine = AlertEngineV5()
+    engine = AlertEngine()
     engine.start()
     try:
         engine.speak("Test alert", critical=True)
@@ -28,7 +28,7 @@ async def test_nonzero_audio_exit_is_reported_without_affecting_monitoring(monke
 
 
 def test_critical_audio_replaces_queued_coaching():
-    engine = AlertEngineV5()
+    engine = AlertEngine()
     engine.speak("Optional coaching")
     engine.speak("Critical fatigue", critical=True)
     assert engine.queue.qsize() == 1

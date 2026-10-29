@@ -1,7 +1,7 @@
 {
   "findings": [],
   "mode": "strict",
-  "projectRoot": "/Users/amanbhaskar/dms",
+  "projectRoot": ".",
   "schemaVersion": 1,
   "summary": {
     "errors": 0,
