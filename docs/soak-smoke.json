@@ -1,0 +1,71 @@
+{
+  "kind": "real-time synthetic replay soak",
+  "seconds": 30.024377624999033,
+  "frames": 861,
+  "python_current_bytes": 144453,
+  "python_peak_bytes": 148373,
+  "health": {
+    "version": "0.6.0",
+    "session_id": "fbe36259-cfe5-42ab-b212-e9fe45a13217",
+    "monitoring": "monitoring",
+    "snapshot": {
+      "version": 1,
+      "session_id": "fbe36259-cfe5-42ab-b212-e9fe45a13217",
+      "frame_id": 860,
+      "captured_at": 1793280789.5424562,
+      "processed_at": 1793280789.5429492,
+      "state": "monitoring",
+      "validity": {
+        "ear": true,
+        "mar": true,
+        "pitch": true,
+        "yaw": true,
+        "eye_closed_s": true,
+        "perclos": true
+      },
+      "measurements": {
+        "ear": 0.3,
+        "mar": 0.2,
+        "pitch": 0.0,
+        "yaw": 0.0,
+        "eye_closed_s": 0.0,
+        "perclos": 0.21
+      },
+      "score": 18.3,
+      "level": "safe",
+      "reasons": [],
+      "synthetic": true,
+      "calibration": {
+        "active": false,
+        "valid_seconds": 0.0,
+        "required_seconds": 20,
+        "reason": ""
+      }
+    },
+    "alert": {
+      "id": "cf4cd353-1e73-438d-9c57-080a50cfdbf3",
+      "session_id": "fbe36259-cfe5-42ab-b212-e9fe45a13217",
+      "severity": "critical",
+      "cause": "recovered",
+      "transition": "resolved",
+      "timestamp": 1793280785.573396,
+      "acknowledged": false,
+      "message": "Stop at a safe place and take a break."
+    },
+    "errors": {},
+    "components": {
+      "gemini": "not configured",
+      "knowledge": "lexical",
+      "voice": "not installed"
+    },
+    "metrics": {
+      "frames": 861,
+      "p95_capture_to_state_ms": 0.926971435546875,
+      "p95_alert_dispatch_ms": 0.5089580008643679,
+      "recorder_backlog": 0,
+      "bus": {
+        "published": 869
+      }
+    }
+  }
+}

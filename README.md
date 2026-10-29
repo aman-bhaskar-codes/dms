@@ -1,127 +1,105 @@
-<div align="center">
-  
-# 🚗 DMS V5 SENTINEL
-### The Ultimate Agentic Driver Monitoring Ecosystem
+# Sentinel V6
 
-[![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white&style=for-the-badge)](#)
-[![MediaPipe](https://img.shields.io/badge/MediaPipe-Vision_Tasks-orange?logo=google&logoColor=white&style=for-the-badge)](#)
-[![FastAPI](https://img.shields.io/badge/FastAPI-WebSockets-teal?logo=fastapi&logoColor=white&style=for-the-badge)](#)
-[![Ollama](https://img.shields.io/badge/Ollama-Local_AI-red?logo=ollama&logoColor=white&style=for-the-badge)](#)
-[![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector_Memory-purple?logo=database&logoColor=white&style=for-the-badge)](#)
-[![YOLOv8](https://img.shields.io/badge/YOLOv8-Traffic_Context-yellow?logo=ultralytics&logoColor=black&style=for-the-badge)](#)
+A local driver-monitoring **demonstration** for Apple Silicon Macs. Webcam geometry, deterministic alerts, calibration, session history, reports, and replay work locally. Optional Gemini assistance handles curated general questions and predefined synthetic scenarios.
 
-<img src="https://raw.githubusercontent.com/n3r4zzurr0/svg-spinners/main/svg-css/pulse-multiple.svg" width="30"/> **SYSTEM ONLINE** 
+![Sentinel dashboard](docs/design/dashboard.png)
 
-DMS V5 SENTINEL is a highly advanced, 100% offline **Event-Driven Agentic System**. It moves beyond reactive alerts to actively analyze driver fatigue, maintain unified episodic/semantic memory, assess traffic context, and orchestrate protective interventions using an asynchronous multi-agent ReAct loop.
+## Start here
 
-</div>
+Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). From this checkout:
 
----
-
-## 🌟 Cinematic Dashboard & UI
-
-DMS V5 replaces traditional local GUIs with a **Premium Glassmorphism Web Dashboard** served via ultra-low latency WebSockets.
-
-*   **HUD Overlay:** Live camera stream rendered with Face Mesh bounding contours and real-time biometric stats directly painted on the frame.
-*   **Voice Chat Terminal:** Real-time conversational interface with the Sentinel Voice Agent.
-*   **LSTM Prediction Graphs:** Scrolling real-time charting forecasting fatigue 3 minutes into the future.
-*   **Orchestrator Console:** Terminal-style window showing live ReAct steps, thoughts, and cognitive logic execution.
-
----
-
-## 🧠 Core Architecture: Zero-Coupling Event Bus
-
-At the heart of V5 is the **EventBus**—a highly concurrent publisher/subscriber engine that completely decouples perception, orchestration, and UI updates.
-
-```mermaid
-graph TD;
-    Camera[📷 Web Camera] --> FP[Perception Pipeline]
-    Mic[🎤 Microphone] --> VP[Voice Pipeline]
-    
-    FP --> |FRAME_PROCESSED| Bus((Event Bus))
-    FP --> |FATIGUE_SCORE| Bus
-    VP --> |VOICE_TRANSCRIPT| Bus
-    
-    Bus --> |FATIGUE_CRITICAL| Orch[Orchestrator ReAct Loop]
-    Bus --> |VOICE_INTENT| Orch
-    
-    Orch --> SA[Safety Agent]
-    Orch --> RAG[RAG Memory Engine]
-    
-    SA --> |AGENT_TASK| Bus
-    SA --> |VOICE_RESPONSE| Bus
-    SA --> |UI_OVERLAY_UPDATE| Bus
-    
-    Bus --> Web[FastAPI WebServer]
-    Web --> Client[Live HUD Dashboard]
+```sh
+uv sync --locked --extra gemini
+uv run sentinel check
+uv run sentinel run
 ```
 
----
+Open **http://127.0.0.1:8000**. Choose **Start replay** for a 30-second artificial scenario, or **Start webcam** while stationary. Allow camera access for the launching terminal in macOS System Settings → Privacy & Security → Camera.
 
-## 🔬 Elite 9-Signal Composite Fatigue Engine
+For automatic replay startup:
 
-The V5 perception engine utilizes MediaPipe's Task API and an adaptive Kalman Filter Bank (<0.5ms/frame) to smooth 478 3D landmarks in real-time, feeding a comprehensive fusion engine.
-
-| Signal | Feature Description | Core Algorithm |
-| :--- | :--- | :--- |
-| **EAR / Blinks** | Eye Aspect Ratio + Blink Velocity | Soukupová & Čech + 1D Kalman |
-| **PERCLOS** | Percentage of Eye Closure | Weighted rolling threshold |
-| **Head Sway** | Nod frequency + sway oscillation | Head geometry pose vector variance |
-| **MAR / Yawn** | 3D Mouth Aspect Ratio | Landmark Euclidean ratios |
-| **Gaze Quality** | Attention heatmap + saccade speed | Iris tracking + saccade classification |
-| **rPPG** | Heart rate & HRV-based stress | Forehead green-channel FFT |
-| **Traffic Context**| Vehicle density & lane-change risk | YOLOv8 Scene Understanding |
-| **LSTM Forecast**| 3-minute predictive fatigue trending | PyTorch LSTM |
-
----
-
-## 💬 Traffic-Aware Voice Agent & RAG
-
-The **Sentinel Voice Agent** continuously listens via **Silero VAD** gating and transcribes using **Faster-Whisper**. 
-
-It provides context-aware interventions utilizing:
-1.  **ChromaDB Vector Store:** Retrieves safety guidelines and past driver profiles via Semantic RAG.
-2.  **Traffic Awareness:** Adjusts its tone and recommendations if it detects heavy traffic or lane-change risk via YOLOv8.
-3.  **Local LLM (Ollama):** Classifies intentions and generates conversational responses entirely offline.
-
-> **Driver:** *"I'm starting to feel quite tired."*  
-> **Sentinel:** *"Noted. Your blink velocity has slowed down and your fatigue score is rising. Traffic is currently sparse. I recommend pulling over at the next exit for a rest."*
-
----
-
-## 🛠️ Installation & Execution
-
-### 📋 Prerequisites
-*   macOS (M-Series optimized), Linux, or Windows.
-*   **uv** (Ultra-fast Python package installer).
-*   **Ollama** running locally for LLMs.
-
-### ⚡ Setup & Run
-
-```bash
-# 1. Install dependencies extremely fast using uv
-uv sync
-
-# 2. Start the V5 Event-Driven Orchestrator & Web Server
-uv run python main_v5.py
+```sh
+uv run sentinel run --replay
 ```
 
-*Open `http://localhost:8000` in your browser to access the Sentinel Dashboard.*
+The bundled Face Landmarker asset is verified by checksum. To restore it explicitly:
 
----
+```sh
+uv run sentinel setup-models
+```
 
-## 📁 Project Structure
+Application startup never downloads model assets. A new machine needs internet for dependency installation; core operation then works offline. The supported installation is this source checkout with `uv`, not the historical V4 setup commands.
 
-*   [`core/`](core/) — The async EventBus, event payloads (`models.py`), and system configuration.
-*   [`perception/`](perception/) — MediaPipe FaceLandmarker, Kalman Filter Bank, rPPG, and LSTM Fatigue Engine.
-*   [`detection/`](detection/) — YOLOv8 Traffic and Scene context analyzers.
-*   [`agents/`](agents/) — ReAct `asyncio.PriorityQueue` loop, Safety escalation, and Coaching logic.
-*   [`voice/`](voice/) — Silero VAD, Whisper STT, and Text-to-Speech integration.
-*   [`memory/`](memory/) — Unified memory stack (Working buffer, Episodic SQLite, Semantic ChromaDB).
-*   [`ui/web/`](ui/web/) — FastAPI WebSocket server and cinematic HTML/CSS/JS frontend.
-*   [`rag/`](rag/) — Semantic search engine for driver history and safety manuals.
+## Gemini, optionally
 
----
-<div align="center">
-  <i>Engineered for unparalleled safety, absolute privacy, and zero-latency autonomous interventions.</i>
-</div>
+Copy `.env.example` to `.env` and set `GEMINI_API_KEY` on the backend. Never put a key in JavaScript. `GEMINI_MODEL` selects the model; the default is `gemini-2.5-flash`. Verify availability and your project's quota in [AI Studio](https://aistudio.google.com/).
+
+The UI supports **local status**, **general knowledge**, and **synthetic demo**. General knowledge sends only a curated question and approved local knowledge excerpts. Arbitrary user text, webcam frames, recordings, driver identifiers, measurements, and real trip history are not accepted by the cloud endpoint. Real trip reports use local templates.
+
+Gemini is limited to 20 attempts per UTC day, at least 10 seconds apart, 512 output tokens, one active request, three queued requests, and a 15-second generation deadline. Usage persists in SQLite. Provider quotas can be lower; no paid tools or paid-model fallback are enabled. Keep the Gemini project on its unpaid tier for zero service charges. Account billing is controlled in AI Studio, not enforceable by this application.
+
+Read [Google's unpaid-service data terms](https://ai.google.dev/gemini-api/terms) before using free cloud inference. A valid citation ID is checked mechanically; semantic answer correctness still needs human evaluation.
+
+## Local knowledge and voice extras
+
+The base installation includes approved text documents and local lexical retrieval. Optional hybrid retrieval uses Chroma, local sentence-transformer embeddings, and BM25 rank fusion:
+
+```sh
+uv sync --locked --extra gemini --extra knowledge
+uv run sentinel setup-models --knowledge
+```
+
+Local voice requires a downloaded Whisper model. Downloads happen only on explicit setup; model revisions, sizes, and checksums are recorded locally:
+
+```sh
+uv sync --locked --extra gemini --extra knowledge --extra voice
+uv run sentinel setup-models --knowledge --voice
+```
+
+In Assistant, **Record locally · 5 sec** captures five seconds after the click, transcribes locally, and handles status/fatigue/break/calibration intents. The microphone is off otherwise. macOS `say` provides local speech; critical alerts preempt assistant speech. No raw video or audio is persisted.
+
+## Monitoring behavior
+
+- Time-based eye closure and rolling PERCLOS; EAR, mouth ratio, and head pose.
+- Missing face means **unavailable**. Missing head pose means **degraded**, not a fabricated zero reading.
+- Guided calibration needs 20 valid frontal-face seconds within a 60-second window.
+- Initial demonstration thresholds: warning 55, critical 72; one-second sustained score crossing; prolonged eye closure 1.5 seconds; five-point exit hysteresis; three-second recovery; eight-second reminders.
+- Acknowledgement silences the current announcement without clearing the condition.
+- No brightness-derived heart rate, micro-expression score, or three-minute prediction.
+
+These heuristic defaults are not a validated fatigue classifier. The app cannot determine fitness to drive or control a vehicle. Stop safely and rest if tired, regardless of the score.
+
+## History and settings
+
+SQLite data is stored under `data/sentinel/`. Session snapshots are sampled at 1 Hz; transitions and failures are recorded separately in bounded, batched storage. No-face samples remain missing in reports. Export JSON, CSV, or printable HTML from History. Delete sessions through a confirmation dialog. Completed sessions older than 30 days expire by default; retention is configurable. Settings are saved locally and apply to the next session; environment settings initialize the application before saved UI preferences.
+
+To import old session history without modifying the source database:
+
+```sh
+uv run sentinel import-legacy /absolute/path/to/old.db
+```
+
+See [architecture and API](docs/architecture.md), [demo walkthrough](docs/demo.md), and [verification record](docs/verification.md).
+
+## Development checks
+
+```sh
+uv run pytest -q
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy
+uv run playwright install chromium
+# In a separate terminal, start `uv run sentinel run` first:
+uv run python scripts/browser_check.py
+uv run python scripts/benchmark.py
+# Explicit one-hour, real-time synthetic soak:
+uv run python scripts/soak.py --seconds 3600
+```
+
+MediaPipe's native initialization and Chromium need normal process permissions on macOS; a restricted automation sandbox may abort native libraries. CI runs the Python tests on Linux. Browser checks use a running local server and mock no cloud responses.
+
+## Design and legacy code
+
+[Figma design specification](https://www.figma.com/design/xSyBgQHfVPA0M9Fm9A9Wqu) · [design contract](DESIGN.md) · [interaction contract](UX-CONTRACT.md).
+
+The supported entry point is `sentinel` (implemented by `main_v5.py`). Older `main.py`, legacy dashboards, Ollama agents, research estimators, and evaluation scripts remain as historical source. They are not wired into V6 and are not supported launch paths. V5.1 stabilization and V6 capability changes are delivered together on this feature branch; hardware acceptance remains a release gate rather than an implied certification.

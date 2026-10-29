@@ -8,11 +8,12 @@ Upgrades over V4:
   4. Dominant signal identification for explainability dashboard
   5. Falls back gracefully to linear extrapolation when ONNX model unavailable
 """
+
 from __future__ import annotations
 
 import numpy as np
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 import logging
 
@@ -21,13 +22,13 @@ logger = logging.getLogger("dms.fatigue_v5")
 
 @dataclass
 class FatigueResult:
-    score: float            # 0.0 – 100.0
-    level: str              # "safe" | "mild" | "warning" | "critical"
+    score: float  # 0.0 – 100.0
+    level: str  # "safe" | "mild" | "warning" | "critical"
     prediction_3min: float  # Projected score 3 minutes from now
-    confidence: float       # Model confidence 0-1 (based on history depth)
-    dominant_signal: str    # Which signal contributed most
-    weights: dict           # Current adaptive weights (for dashboard transparency)
-    components: dict        # Per-signal contribution scores (for dashboard)
+    confidence: float  # Model confidence 0-1 (based on history depth)
+    dominant_signal: str  # Which signal contributed most
+    weights: dict  # Current adaptive weights (for dashboard transparency)
+    components: dict  # Per-signal contribution scores (for dashboard)
 
 
 class FatigueEngineV5:
@@ -43,7 +44,7 @@ class FatigueEngineV5:
     """
 
     LEVELS = [
-        (0.0,  25.0, "safe"),
+        (0.0, 25.0, "safe"),
         (25.0, 45.0, "mild"),
         (45.0, 70.0, "warning"),
         (70.0, 101.0, "critical"),
@@ -51,14 +52,14 @@ class FatigueEngineV5:
 
     # Research-calibrated baseline weights (Williamson 2014, Kaida 2007)
     BASE_WEIGHTS: dict[str, float] = {
-        "ear":              0.22,
-        "perclos":          0.18,
-        "blink_dynamics":   0.13,
-        "head_sway":        0.09,
-        "mar":              0.09,
-        "gaze_quality":     0.10,
-        "rppg":             0.10,
-        "scene_context":    0.05,
+        "ear": 0.22,
+        "perclos": 0.18,
+        "blink_dynamics": 0.13,
+        "head_sway": 0.09,
+        "mar": 0.09,
+        "gaze_quality": 0.10,
+        "rppg": 0.10,
+        "scene_context": 0.05,
         "micro_expression": 0.04,
     }
 
@@ -78,6 +79,7 @@ class FatigueEngineV5:
     def _load_onnx(self, path: str) -> None:
         try:
             import onnxruntime as ort
+
             opts = ort.SessionOptions()
             opts.intra_op_num_threads = 1
             opts.inter_op_num_threads = 1
@@ -88,7 +90,9 @@ class FatigueEngineV5:
             )
             logger.info(f"[FatigueV5] LSTM model loaded from {path}")
         except ImportError:
-            logger.warning("[FatigueV5] onnxruntime not installed — LSTM disabled, using linear fallback.")
+            logger.warning(
+                "[FatigueV5] onnxruntime not installed — LSTM disabled, using linear fallback."
+            )
         except Exception as e:
             logger.warning(f"[FatigueV5] Could not load LSTM model ({e}) — using linear fallback.")
 
@@ -106,10 +110,13 @@ class FatigueEngineV5:
         components = self._extract_components(signals)
 
         # 2. Weighted sum → raw score
-        raw_score = float(np.clip(
-            sum(components[k] * self._weights.get(k, 0.0) for k in components) * 100.0,
-            0.0, 100.0
-        ))
+        raw_score = float(
+            np.clip(
+                sum(components[k] * self._weights.get(k, 0.0) for k in components) * 100.0,
+                0.0,
+                100.0,
+            )
+        )
 
         # 3. EMA smoothing  α=0.15
         self._score_ema = 0.15 * raw_score + 0.85 * self._score_ema
@@ -122,15 +129,11 @@ class FatigueEngineV5:
         prediction = self._predict_3min()
 
         # 6. Find dominant contributing signal
-        dominant = max(
-            components,
-            key=lambda k: components[k] * self._weights.get(k, 0.0)
-        )
+        dominant = max(components, key=lambda k: components[k] * self._weights.get(k, 0.0))
 
         # Build component display dict (0-100 scale for UI)
         display_components = {
-            k: round(v * self._weights.get(k, 0.0) * 100.0, 1)
-            for k, v in components.items()
+            k: round(v * self._weights.get(k, 0.0) * 100.0, 1) for k, v in components.items()
         }
 
         return FatigueResult(
@@ -151,21 +154,21 @@ class FatigueEngineV5:
 
         return {
             # EAR: how much below open baseline (0.30) we are
-            "ear":              clip01(0.30 - s.get("ear", 0.30), 0.0, 0.15),
+            "ear": clip01(0.30 - s.get("ear", 0.30), 0.0, 0.15),
             # PERCLOS: percentage of time eyes closed (>15% = severe)
-            "perclos":          clip01(s.get("perclos", 0.0), 0.0, 0.40),
+            "perclos": clip01(s.get("perclos", 0.0), 0.0, 0.40),
             # Blink dynamics: slow closures indicate drowsy blink pattern
-            "blink_dynamics":   clip01(s.get("slow_blink_ratio", 0.0), 0.0, 1.0),
+            "blink_dynamics": clip01(s.get("slow_blink_ratio", 0.0), 0.0, 1.0),
             # Head sway: oscillatory nodding amplitude
-            "head_sway":        clip01(s.get("head_sway", 0.0), 0.0, 30.0),
+            "head_sway": clip01(s.get("head_sway", 0.0), 0.0, 30.0),
             # MAR: elevated mouth opening = yawning
-            "mar":              clip01(s.get("mar", 0.0) - 0.35, 0.0, 0.40),
+            "mar": clip01(s.get("mar", 0.0) - 0.35, 0.0, 0.40),
             # Gaze: low quality = unfocused, wandering attention
-            "gaze_quality":     clip01(1.0 - s.get("gaze_quality", 1.0), 0.0, 1.0),
+            "gaze_quality": clip01(1.0 - s.get("gaze_quality", 1.0), 0.0, 1.0),
             # rPPG: very low HR indicates pre-microsleep state
-            "rppg":             clip01(abs(s.get("rppg_hr", 70.0) - 70.0), 0.0, 40.0),
+            "rppg": clip01(abs(s.get("rppg_hr", 70.0) - 70.0), 0.0, 40.0),
             # Scene: glare causes visual fatigue
-            "scene_context":    clip01(s.get("scene_glare", 0.0), 0.0, 1.0),
+            "scene_context": clip01(s.get("scene_glare", 0.0), 0.0, 1.0),
             # Micro-expressions: involuntary burst = sudden re-awakening
             "micro_expression": clip01(s.get("micro_expression_score", 0.0), 0.0, 1.0),
         }

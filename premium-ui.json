@@ -1,0 +1,17 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["ui/web/static"],
+  "locale": "en",
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": ["Select/Listbox", "Form", "Scrollbar", "CRUD"],
+  "ownership": { "Select/Listbox": "native" },
+  "requiredCommands": ["unit", "e2e"],
+  "commands": {
+    "unit": "uv run pytest -q",
+    "e2e": "uv run python scripts/browser_check.py"
+  },
+  "evidence": {
+    "crudFullFlow": "scripts/browser_check.py",
+    "failurePaths": "tests/test_runtime.py"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "offline signal-policy load test; no camera inference",
+  "frames": 108000,
+  "simulated_seconds": 3600.0,
+  "wall_seconds": 16.89846720800415,
+  "throughput_frames_s": 6391.112203883473,
+  "p95_policy_ms": 0.15775000065332279,
+  "peak_python_bytes": 340813,
+  "retained_window_samples": 1801,
+  "alerts": 121
+}

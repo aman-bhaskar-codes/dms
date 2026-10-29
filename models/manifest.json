@@ -1,0 +1,25 @@
+{
+  "face_landmarker": {
+    "path": "face_landmarker.task",
+    "source": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+    "version": "float16/1",
+    "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff",
+    "size": 3758596,
+    "license": "Apache-2.0",
+    "license_url": "https://storage.googleapis.com/mediapipe-assets/Model%20Card%20BlazeFace%20%28Short%20Range%29.pdf"
+  },
+  "embeddings": {
+    "repository": "sentence-transformers/all-MiniLM-L6-v2",
+    "path": "models/all-MiniLM-L6-v2",
+    "license": "Apache-2.0",
+    "version": "resolved commit recorded during explicit setup",
+    "checksums": "written to installed-models.json during setup"
+  },
+  "voice": {
+    "repository": "Systran/faster-whisper-base.en",
+    "path": "models/whisper-base-en",
+    "license": "MIT",
+    "version": "resolved commit recorded during explicit setup",
+    "checksums": "written to installed-models.json during setup"
+  }
+}

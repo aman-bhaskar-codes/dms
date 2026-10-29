@@ -6,24 +6,23 @@ Using Pydantic v2 for validation + serialization.
 from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 from pydantic import BaseModel
-import numpy as np
 import time
 
 
 class FatigueLevel(str, Enum):
-    SAFE     = "safe"
-    MILD     = "mild"
-    WARNING  = "warning"
+    SAFE = "safe"
+    MILD = "mild"
+    WARNING = "warning"
     CRITICAL = "critical"
     MICROSLEEP = "microsleep"
 
 
 class AlertSeverity(str, Enum):
-    INFO    = "info"
+    INFO = "info"
     WARNING = "warning"
-    DANGER  = "danger"
+    DANGER = "danger"
     CRITICAL = "critical"
 
 
@@ -35,14 +34,14 @@ class EARFrame:
     blink_count: int
     blink_velocity: float
     slow_blink_ratio: float
-    state: str   # "normal" | "tired" | "critical"
+    state: str  # "normal" | "tired" | "critical"
     timestamp: float = field(default_factory=time.monotonic)
 
 
 @dataclass
 class PERCLOSFrame:
-    perclos: float       # 0.0 – 1.0
-    trend_slope: float   # positive = worsening
+    perclos: float  # 0.0 – 1.0
+    trend_slope: float  # positive = worsening
     predicted_3min: float
     timestamp: float = field(default_factory=time.monotonic)
 
@@ -54,7 +53,7 @@ class HeadPoseFrame:
     roll: float
     sway_amplitude: float
     nod_frequency: float
-    state: str   # "forward" | "nodding" | "distracted"
+    state: str  # "forward" | "nodding" | "distracted"
     timestamp: float = field(default_factory=time.monotonic)
 
 
@@ -64,7 +63,7 @@ class GazeFrame:
     gaze_y: float
     fixation_duration: float
     saccade_velocity: float
-    attention_score: float   # 0-1
+    attention_score: float  # 0-1
     timestamp: float = field(default_factory=time.monotonic)
 
 
@@ -72,18 +71,19 @@ class GazeFrame:
 class RPPGFrame:
     heart_rate_bpm: float
     hrv_sdnn: float
-    stress_index: float   # 0-1
-    signal_quality: float # 0-1
+    stress_index: float  # 0-1
+    signal_quality: float  # 0-1
     timestamp: float = field(default_factory=time.monotonic)
 
 
 @dataclass
 class TrafficFrame:
     """NEW V5: Traffic context from scene understanding."""
-    vehicle_density: float    # 0-1 (sparse → heavy)
+
+    vehicle_density: float  # 0-1 (sparse → heavy)
     is_highway: bool
     estimated_speed_kmh: float
-    lane_change_risk: float   # 0-1
+    lane_change_risk: float  # 0-1
     pedestrian_proximity: float  # 0-1
     timestamp: float = field(default_factory=time.monotonic)
 
@@ -91,9 +91,10 @@ class TrafficFrame:
 @dataclass
 class FatigueFrame:
     """The unified output of the fusion engine."""
-    score: float              # 0-100
+
+    score: float  # 0-100
     level: FatigueLevel
-    predicted_3min: float     # projected score in 3 minutes
+    predicted_3min: float  # projected score in 3 minutes
     component_scores: Dict[str, float]  # per-signal contributions
     ear: Optional[EARFrame] = None
     perclos: Optional[PERCLOSFrame] = None
