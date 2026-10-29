@@ -1,4 +1,4 @@
-# Sentinel design context
+# DMS design context
 
 A local driver-monitoring instrument panel for a supervised portfolio demonstration. The primary job is to make tracking quality, current signals, and alerts clear.
 

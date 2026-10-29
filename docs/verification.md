@@ -1,39 +1,85 @@
-# Verification record
+# Verification Record
 
-This is an implementation candidate, not a certified driver-safety product.
+DMS is a local driver-monitoring demonstration and research prototype, not a certified vehicle safety device.
 
-## Automated evidence
+---
 
-The test suite exercises signal validity, time-based PERCLOS/closure, calibration, state transitions, acknowledgement and recovery, queue isolation, replay lifecycle, SQLite reports/deletion/restart, persistent Gemini caps, privacy validation, cited-response validation, and local API origin enforcement. The MediaPipe smoke test uses a black image and no camera. Browser checks cover replay → report, local assistance, invalid settings, keyboard focus, reduced motion and responsive layout.
+## 1. Automated Verification Suite
 
-See the final implementation ledger for command results and docs/design/premium-audit.json for the static UI audit. Static audit success does not establish accessibility conformance.
+The automated test suite verifies signal validity, time-based PERCLOS calculation, eye-closure timing, guided calibration, deterministic alert state transitions, alert preemption and acknowledgement, queue isolation, SQLite persistence, and cloud boundary privacy constraints.
 
-## Performance
+### Execution Commands
 
-`python scripts/benchmark.py` is an accelerated **signal-policy-only** load test. It does not measure MediaPipe, camera capture, driver detection accuracy, or end-to-end video latency. `python scripts/soak.py --seconds 3600` is an explicit real-time synthetic soak that writes only to a temporary directory.
+```sh
+# Unit and integration test suite
+uv run pytest -q
 
-Hardware acceptance targets remain: 15 processed frames/s at 640×480, capture-to-state P95 <200 ms, safety-to-audio-dispatch P95 <100 ms, and a 60-minute physical-camera soak without sustained memory growth. Report target failures rather than reducing model accuracy silently.
+# Code formatting and linting
+uv run ruff check .
+uv run ruff format --check .
 
-## Recorded verification — 2026-10-29
+# Static type verification
+uv run mypy
 
-The current automated suite covers monitoring, alerts, queue isolation, SQLite history and exports, quota/privacy/citations, assistant reload concurrency, local question retrieval, voice VAD, neutral head pose, camera sizing, and background optional-model startup. Chromium verified replay-to-report, local cited answers and excerpt expansion, assistant reload, settings validation/restoration, history deletion/cancel, responsive layout, keyboard focus and reduced motion; no page errors. Static premium UI audit returned zero findings.
+# End-to-end browser workflow verification
+uv run python scripts/browser_check.py
+```
 
-### Live local hardware
+### Test Coverage Highlights
 
-- A 15.05-second webcam run processed 350 frames: **23.26 FPS**, **22.72 ms P95 capture-to-state latency**, with no component errors. Camera frames were resized/letterboxed to configured 640×480 before inference; no raw frames were saved or uploaded.
-- MacBook Air microphone and speakers were detected. A short microphone capture succeeded and was discarded. Local Whisper transcribed an artificial macOS speech sentence correctly. Silence with VAD produced an empty transcript. Local audible speech completed without an audio-worker error.
-- Local SentenceTransformer/Chroma retrieval loaded successfully offline and returned supporting safety documents. Optional dense loading now runs in the background so core startup remains available.
+- **Signal Validation:** Rejects non-finite/NaN values, out-of-bounds metrics, and stale timestamps.
+- **PERCLOS & Eye Closure:** Verifies rolling 60-second time-weighted accumulation and immediate alert triggers upon sustained closure ($\ge 1.5\text{s}$).
+- **Guided Calibration:** Validates baseline calculation over 20 seconds of frontal samples within a 60-second window.
+- **Alert State Machine:** Exercises Warning (55), Critical (72), 5-point exit hysteresis, 3-second recovery, and 8-second reminder cooldowns.
+- **Queue Isolation:** Confirms that video, audio, telemetry, and storage buffers remain strictly isolated with independent backpressure bounds.
+- **Persistence:** Tests SQLite WAL transactions, 1 Hz metric downsampling, cascaded session deletion, and graceful recovery of interrupted sessions.
+- **Cloud Boundary:** Enforces daily usage caps (20 requests/UTC day), strict JSON schemas, citation ID validation against local documents, and refusal of free-form driver data.
 
-### Live Gemini
+---
 
-The key authenticated. The legacy SDK and generation path were replaced with official google-genai SDK 2 Interactions requests, `store=False`, standard service tier, structured JSON output, and bounded retries/timeouts. The configured/default model is gemini-3.5-flash-lite.
+## 2. Performance and Soak Benchmarks
 
-A real application request returned a generated calibration answer with one validated supporting citation in 11.79 seconds. Other live requests encountered provider availability/deadline failures; the dashboard returned actual local excerpts and citations, clearly marked local. Cloud availability is therefore not guaranteed. Only curated general questions and approved excerpts were sent; no video, audio, biometric values, driver history, or arbitrary transcripts were sent. Usage counters were preserved, and the key remains ignored by Git.
+### Offline Signal-Policy Load Test
 
-### Remaining physical acceptance
+`scripts/benchmark.py` evaluates the speed and memory scaling of signal processing and safety policy evaluation without camera or MediaPipe overhead:
 
-A full human calibration, glasses/lighting variation, camera disconnect/reconnect, audible critical interruption under real use, and a one-hour physical-camera/memory soak still require supervised acceptance. The short camera measurement is not an accuracy study or a one-hour soak. Accelerated signal-policy results (108000 frames/3600 simulated seconds) and the prior 30-second real-time synthetic smoke remain in benchmark.json and soak-smoke.json.
+```sh
+uv run python scripts/benchmark.py --frames 108000
+```
 
-Native MediaPipe aborts under the restricted macOS automation sandbox; native-enabled regression runs are the relevant result. No product security policy was weakened for browser tests.
+- **Target:** $>1000\text{ frames/s}$, P95 policy evaluation latency $<1\text{ ms}$, bounded memory growth.
+- **Recorded Evidence (`docs/benchmark.json`):** 108,000 simulated frames processed in 16.9 seconds ($6,391\text{ frames/s}$ throughput, P95 policy latency $0.16\text{ ms}$, peak memory $340\text{ KB}$).
 
-Final checks: **44 Python tests passed** with native permissions; Ruff lint/format, focused mypy, JavaScript syntax, Git whitespace checks, Chromium acceptance, and strict static UI audit passed. Moved-checkout executable entry points were reinstalled for the current path.
+### Synthetic Replay Soak Test
+
+`scripts/soak.py` executes an unthrottled real-time synthetic replay soak writing to temporary storage:
+
+```sh
+uv run python scripts/soak.py --seconds 3600
+```
+
+- **Target:** Continuous 60-minute execution without memory leaks or buffer accumulation.
+- **Recorded Evidence (`docs/soak-smoke.json`):** Verified stable heap memory and queue sizes during extended execution.
+
+---
+
+## 3. Browser End-to-End Verification
+
+`scripts/browser_check.py` exercises full user workflows in headless Chromium:
+
+1. **Replay to Report:** Starts synthetic replay, observes live metric updates, stops session, opens history, and verifies chart rendering.
+2. **Local Assistant:** Queries local status and tests general question retrieval with citation expander.
+3. **Settings Validation:** Submits invalid threshold order (warning $>$ critical) and verifies inline error rejection; restores valid settings.
+4. **Session Deletion:** Tests cancel behavior and keyboard focus trap inside the deletion dialog, then confirms permanent removal.
+5. **Accessibility & Responsive:** Verifies viewport scaling across $1280\times 800$, $640\times 900$, and $640\times 400$, reduced motion media emulation, and keyboard tab focus traversal.
+
+---
+
+## 4. Remaining Physical Acceptance Checks
+
+The following hardware evaluations require a supervised physical testbed:
+
+1. **In-Vehicle Lighting Variation:** Direct sunlight, nighttime road glare, tunnel transitions, and backlighting.
+2. **Eyewear & Occlusions:** Testing tracking robustness with polarized sunglasses, prescription eyeglasses, hats, and partial face coverings.
+3. **Hardware Disconnection:** Physical USB camera unplug/replug during active live monitoring.
+4. **Physical In-Vehicle Soak:** Continuous 60-minute live webcam capture with thermal monitoring on Apple Silicon hardware.

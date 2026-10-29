@@ -1,4 +1,4 @@
-# Sentinel V6 design specification
+# DMS design specification
 
 Figma: https://www.figma.com/design/xSyBgQHfVPA0M9Fm9A9Wqu
 

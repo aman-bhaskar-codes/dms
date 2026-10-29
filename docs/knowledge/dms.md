@@ -1,7 +1,7 @@
 ---
-title: Sentinel demonstration guide
-source: Sentinel local product specification
-revision: 2026-10-29
+title: DMS demonstration guide
+source: DMS local product specification
+revision: 2026-10-30
 ---
 # Calibration
 Calibrate this webcam demonstration while stationary, with even lighting and a frontal face. Keep eyes naturally open. Calibration requires at least 20 seconds of valid samples within 60 seconds. A calibration baseline adjusts the eye-closure threshold. Calibration does not establish detection accuracy.
